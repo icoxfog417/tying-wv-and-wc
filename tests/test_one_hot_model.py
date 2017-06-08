@@ -7,7 +7,7 @@ from model.data_processor import DataProcessor
 from model.one_hot_model import OneHotModel
 
 
-class TestModel(unittest.TestCase):
+class TestOneHotModel(unittest.TestCase):
 
     def test_one_hot_forward(self):
         vocab_size = 10
@@ -24,6 +24,13 @@ class TestModel(unittest.TestCase):
         model.fit(x, y, x_t, y_t, epochs=1)
         pred = model.predict(np.array([0,1,2]))
         print(pred)
+
+    def test_save_load(self):
+        model = OneHotModel(10, 20)
+        path = model.save(os.path.dirname(__file__))
+        self.assertTrue(os.path.exists(path))
+        model.load(path)
+        os.remove(path)
 
 
 if __name__ == "__main__":

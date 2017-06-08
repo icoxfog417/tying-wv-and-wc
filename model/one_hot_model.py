@@ -1,6 +1,8 @@
+import os
 import numpy as np
 from keras.models import Sequential
 from keras.layers import Embedding, Dense, LSTM, Activation, Dropout
+from keras import backend as K
 from model.lang_model_sgd import LangModelSGD
 from model.settings import DatasetSetting
 
@@ -22,16 +24,16 @@ class OneHotModel():
         dset_setting = DatasetSetting.get(dataset_kind)
         dropout = dset_setting["dropout"][network_size]
 
-        embedding = Embedding(self.vocab_size, self.vector_length, input_length=sentence_size)
+        self.embedding = Embedding(self.vocab_size, self.vector_length, input_length=sentence_size)
         layer1 = LSTM(self.vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
         layer2 = LSTM(self.vector_length, return_sequences=False, dropout=dropout, recurrent_dropout=dropout)
         projection = Dense(self.vocab_size, activation="softmax")
         self.model = Sequential()
-        self.model.add(embedding)
+        self.model.add(self.embedding)
         self.model.add(layer1)
         self.model.add(layer2)
         self.model.add(projection)
-
+    
     def get_vector_length(self, network_size):
         if network_size == "small":
             return 200
@@ -46,8 +48,15 @@ class OneHotModel():
         sgd = LangModelSGD(self.network_size, self.dataset_kind)
         self.model.compile(
             loss="categorical_crossentropy",
-            optimizer=sgd
+            optimizer=sgd,
+            metrics=["accuracy", self.perplexity]
             )
+    
+    @classmethod
+    def perplexity(cls, y_true, y_pred):
+        cross_entropy = K.categorical_crossentropy(y_pred, y_true)
+        perplexity = K.pow(2.0, cross_entropy)
+        return perplexity
     
     def fit(self, x_train, y_train, x_test, y_test, batch_size=32, epochs=20):
         self.model.fit(
@@ -62,4 +71,12 @@ class OneHotModel():
             x[0][i] = w
         pred = self.model.predict(x)[0]
         return pred
+    
+    def save(self, folder, suffix=""):
+        file_name = "_".join([self.__class__.__name__.lower() + suffix]) + ".h5"
+        path = os.path.join(folder, file_name)
+        self.model.save_weights(path)
+        return path
 
+    def load(self, path):
+        self.model.load_weights(path)
