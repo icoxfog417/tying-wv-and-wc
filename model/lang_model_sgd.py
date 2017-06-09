@@ -1,8 +1,9 @@
 import copy
-from keras import backend as K
-from keras.optimizers import Optimizer
 import numpy as np
 import tensorflow as tf
+from keras import backend as K
+from keras.optimizers import Optimizer
+from keras.callbacks import LearningRateScheduler
 from model.settings import SizeSetting, DatasetSetting
 
 
@@ -13,34 +14,41 @@ class LangModelSGD(Optimizer):
         dset_setting = DatasetSetting.get(dataset_kind)
         super(LangModelSGD, self).__init__()
         
-        self.iterations = K.variable(0.)
+        self.iterations = K.variable(0., name="iterations")
+        self.lr = K.variable(1.0, name="lr")
         self.epoch_interval = K.variable(size_setting["epoch_interval"])
-        self.lr = K.variable(1.0)
-        self.decay = K.variable(size_setting["decay"])
+        self.decay = K.variable(size_setting["decay"], name="decay")
         self._clipnorm = size_setting["norm_clipping"]
 
     def get_updates(self, params, constraints, loss):
         grads = self.get_gradients(loss, params)
         norm = K.sqrt(sum([K.sum(K.square(g)) for g in grads]))
         grads = [clip_norm(g, self._clipnorm, norm) for g in grads]
-        if self.iterations % self.epoch_interval == 0:
-            self.lr = self.lr * self.decay
 
-        self.updates = [(self.iterations, self.iterations + 1.)]
+        self.updates = []
+        self.updates.append(K.update_add(self.iterations, 1))
         for p, g in zip(params, grads):
             self.updates.append((p, p - self.lr * g))
         return self.updates
 
     def get_config(self):
-        config = {"lr": float(K.get_value(self.lr)),
-                  "decay": float(K.get_value(self.decay)),
-                  "epoch_interval": float(K.get_value(self.epoch_interval))
+        config = {"iterations": float(K.get_value(self.iterations)),
+                  "lr": float(K.get_value(self.lr))
                   }
         base_config = super(LangModelSGD, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    def get_lr(self):
-        return self.lr.eval()
+    def get_scheduler(self):
+        def scheduler(epoch):
+            epoch_interval = K.get_value(self.epoch_interval)
+            if epoch != 0 and (epoch + 1) % epoch_interval == 0:
+                lr = K.get_value(self.lr)
+                decay = K.get_value(self.decay)
+                K.set_value(self.lr, lr * decay)
+                print(self.get_config())
+            return K.get_value(self.lr)
+    
+        return LearningRateScheduler(scheduler)
 
 
 # because of https://github.com/fchollet/keras/pull/6859

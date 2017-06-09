@@ -35,7 +35,7 @@ class DatasetSetting():
                     "medium": 0.5,
                     "large": 0.35
                 },
-                "gamma": 0.65
+                "gamma": 0.5
             }
         elif kind == "wiki2":
             return {
@@ -44,7 +44,7 @@ class DatasetSetting():
                     "medium": 0.6,
                     "large": 0.6
                 },
-                "gamma": 1.25
+                "gamma": 1.0
             }
         else:
             raise Exception("You have to choose dataset from ptb, wiki2")            

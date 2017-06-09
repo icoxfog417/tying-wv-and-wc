@@ -27,28 +27,28 @@ class TestAugmentedModel(unittest.TestCase):
         sentence_size = 20
 
         dp = DataProcessor()
-        samples = np.array(np.random.randint(vocab_size, size=100))
+        samples = np.tile(np.array(np.random.randint(vocab_size, size=sentence_size)), 10)
         x, y = dp.format(samples, vocab_size, sentence_size)
-        samples = np.array(np.random.randint(vocab_size, size=100))
         x_t, y_t = dp.format(samples, vocab_size, sentence_size)
 
         model = AugmentedModel(vocab_size, sentence_size)
         model.compile()
-        model.fit(x, y, x_t, y_t, epochs=1)
+        print("augmented model -----------")
+        model.fit(x, y, x_t, y_t, epochs=30)
 
     def test_model_tying(self):
         vocab_size = 10
         sentence_size = 20
 
         dp = DataProcessor()
-        samples = np.array(np.random.randint(vocab_size, size=100))
+        samples = np.tile(np.array(np.random.randint(vocab_size, size=sentence_size)), 10)
         x, y = dp.format(samples, vocab_size, sentence_size)
-        samples = np.array(np.random.randint(vocab_size, size=100))
         x_t, y_t = dp.format(samples, vocab_size, sentence_size)
 
         model = AugmentedModel(vocab_size, sentence_size, tying=True)
         model.compile()
-        model.fit(x, y, x_t, y_t, epochs=1)
+        print("tying model ---------------")
+        model.fit(x, y, x_t, y_t, epochs=30)
     
     def test_save_load(self):
         model = AugmentedModel(10, 20, tying=True)

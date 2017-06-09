@@ -12,7 +12,7 @@ class DataProcessor():
         r_idx = r.to_indexed().make_vocab(vocab_size=vocab_size, force=force)
         return r_idx
     
-    def format(self, word_seq, vocab_size, sentence_size=35, skip=3):
+    def format(self, word_seq, vocab_size, sentence_size=35, skip=1):
         sentences = []
         next_words = []
         index = 0

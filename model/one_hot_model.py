@@ -25,13 +25,13 @@ class OneHotModel():
         dropout = dset_setting["dropout"][network_size]
 
         self.embedding = Embedding(self.vocab_size, self.vector_length, input_length=sentence_size)
-        layer1 = LSTM(self.vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
-        layer2 = LSTM(self.vector_length, return_sequences=False, dropout=dropout, recurrent_dropout=dropout)
+        #layer1 = LSTM(self.vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
+        #layer2 = LSTM(self.vector_length, return_sequences=False, dropout=dropout, recurrent_dropout=dropout)
+        cell = LSTM(self.vector_length, dropout=dropout, recurrent_dropout=dropout)
         projection = Dense(self.vocab_size, activation="softmax")
         self.model = Sequential()
         self.model.add(self.embedding)
-        self.model.add(layer1)
-        self.model.add(layer2)
+        self.model.add(cell)
         self.model.add(projection)
     
     def get_vector_length(self, network_size):
@@ -62,7 +62,8 @@ class OneHotModel():
         self.model.fit(
             x_train, y_train,
             batch_size=batch_size,
-            epochs=epochs
+            epochs=epochs,
+            callbacks=[self.model.optimizer.get_scheduler()]
         )
     
     def predict(self, words):

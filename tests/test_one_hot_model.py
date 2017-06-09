@@ -14,14 +14,14 @@ class TestOneHotModel(unittest.TestCase):
         sentence_size = 20
 
         dp = DataProcessor()
-        samples = np.array(np.random.randint(vocab_size, size=100))
+        samples = np.tile(np.array(np.random.randint(vocab_size, size=sentence_size)), 10)
         x, y = dp.format(samples, vocab_size, sentence_size)
-        samples = np.array(np.random.randint(vocab_size, size=100))
-        x_t, y_t = dp.format(samples, vocab_size, sentence_size)
+        x_t, y_t = dp.format(samples, vocab_size, sentence_size, skip=1)
 
         model = OneHotModel(vocab_size, sentence_size)
         model.compile()
-        model.fit(x, y, x_t, y_t, epochs=1)
+        model.fit(x, y, x_t, y_t, epochs=30)
+        print(model.model.optimizer.get_config())
         pred = model.predict(np.array([0,1,2]))
         print(pred)
 
