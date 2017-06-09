@@ -17,14 +17,14 @@ def flatten(data):
     return np.array(flatted)
 
 
-def train_baseline(network_size, dataset_kind, epochs=40):
+def train_baseline(network_size, dataset_kind, epochs=40, skip=1):
     # prepare the data
     dp = DataProcessor()
     ptb = dp.get_ptb(DATA_ROOT, vocab_size=10000, force=True)
     vocab_size = len(ptb.vocab_data())
     sentence_size = 35
-    x_train, y_train = dp.format(flatten(ptb.train_data()), vocab_size, sentence_size)
-    x_valid, y_valid = dp.format(flatten(ptb.valid_data()), vocab_size, sentence_size)
+    x_train, y_train = dp.format(flatten(ptb.train_data()), vocab_size, sentence_size, skip)
+    x_valid, y_valid = dp.format(flatten(ptb.valid_data()), vocab_size, sentence_size, skip)
 
     # make one hot model
     model = OneHotModel(vocab_size, sentence_size, network_size, dataset_kind)
@@ -33,14 +33,14 @@ def train_baseline(network_size, dataset_kind, epochs=40):
     model.save(MODEL_ROOT)
 
 
-def train_augmented(network_size, dataset_kind, tying=False, epochs=40):
+def train_augmented(network_size, dataset_kind, tying=False, epochs=40, skip=1):
     # prepare the data
     dp = DataProcessor()
     ptb = dp.get_ptb(DATA_ROOT, vocab_size=10000)
     vocab_size = len(ptb.vocab_data())
     sentence_size = 35
-    x_train, y_train = dp.format(flatten(ptb.train_data()), vocab_size, sentence_size)
-    x_valid, y_valid = dp.format(flatten(ptb.valid_data()), vocab_size, sentence_size)
+    x_train, y_train = dp.format(flatten(ptb.train_data()), vocab_size, sentence_size, skip)
+    x_valid, y_valid = dp.format(flatten(ptb.valid_data()), vocab_size, sentence_size, skip)
 
     # make one hot model
     model = AugmentedModel(vocab_size, sentence_size, network_size, dataset_kind, tying=tying)
@@ -58,12 +58,13 @@ if __name__ == "__main__":
     parser.add_argument("--nsize", default="small", help="network size (small, medium, large)")
     parser.add_argument("--dataset", default="ptb", help="dataset kind (ptb or wiki2)")
     parser.add_argument("--epochs", type=int, default=40, help="epoch to train")
+    parser.add_argument("--skip", type=int, default=1, help="skip size of sentence")
     args = parser.parse_args()
 
     n_size = args.nsize
     dataset = args.dataset
     if args.aug or args.tying:
         print("Use Augmented Model (tying={})".format(args.tying))
-        train_augmented(n_size, dataset, args.tying, args.epochs)
+        train_augmented(n_size, dataset, args.tying, args.epochs, args.skip)
     else:
-        train_baseline(n_size, dataset, args.epochs)
+        train_baseline(n_size, dataset, args.epochs, args.skip)
