@@ -4,48 +4,55 @@ import numpy as np
 from model.one_hot_model import OneHotModel
 from model.augmented_model import AugmentedModel
 from model.data_processor import DataProcessor
+from model.setting import ProposedSetting
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 MODEL_ROOT = os.path.join(os.path.dirname(__file__), "trained_model")
 
 
-def flatten(data):
-    flatted = []
-    for a in data.values.flatten():
-        flatted += a
-    return np.array(flatted)
+def prepare_dataset(dataset_kind):
+    if dataset_kind == "ptb":
+        dataset = dp.get_ptb(DATA_ROOT, vocab_size=10000, force=True)
+    else:
+        dataset = dp.get_wiki2(DATA_ROOT, vocab_size=30000, force=True)
+
+    return dataset
 
 
-def train_baseline(network_size, dataset_kind, epochs=40, skip=1):
+def train_baseline(network_size, dataset_kind, epochs=40, skip=3):
     # prepare the data
-    dp = DataProcessor()
-    ptb = dp.get_ptb(DATA_ROOT, vocab_size=10000, force=True)
-    vocab_size = len(ptb.vocab_data())
+    setting = ProposedSetting(network_size, dataset_kind)
+    dataset = prepare_dataset(dataset_kind)
+    vocab_size = len(dataset.vocab_data())
     sentence_size = 35
-    x_train, y_train = dp.format(flatten(ptb.train_data()), vocab_size, sentence_size, skip)
-    x_valid, y_valid = dp.format(flatten(ptb.valid_data()), vocab_size, sentence_size, skip)
+
+    dp = DataProcessor()
+    train_steps, train_generator = dp.make_batch_iter(dataset, sentence_size=sentence_size, skip=skip)
+    valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sentence_size=sentence_size, skip=skip)
 
     # make one hot model
-    model = OneHotModel(vocab_size, sentence_size, network_size, dataset_kind)
+    model = OneHotModel(vocab_size, sentence_size, setting)
     model.compile()
-    model.fit(x_valid, y_valid, x_valid, y_valid, epochs=epochs)
+    model.fit_generator(train_generator, train_steps, valid_generator, valid_steps, epochs=epochs)
     model.save(MODEL_ROOT)
 
 
-def train_augmented(network_size, dataset_kind, tying=False, epochs=40, skip=1):
+def train_augmented(network_size, dataset_kind, tying=False, epochs=40, skip=3):
     # prepare the data
-    dp = DataProcessor()
-    ptb = dp.get_ptb(DATA_ROOT, vocab_size=10000)
-    vocab_size = len(ptb.vocab_data())
+    setting = ProposedSetting(network_size, dataset_kind)
+    dataset = prepare_dataset(dataset_kind)
+    vocab_size = len(dataset.vocab_data())
     sentence_size = 35
-    x_train, y_train = dp.format(flatten(ptb.train_data()), vocab_size, sentence_size, skip)
-    x_valid, y_valid = dp.format(flatten(ptb.valid_data()), vocab_size, sentence_size, skip)
+
+    dp = DataProcessor()
+    train_steps, train_generator = dp.make_batch_iter(dataset, sentence_size=sentence_size, skip=skip)
+    valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sentence_size=sentence_size, skip=skip)
 
     # make one hot model
-    model = AugmentedModel(vocab_size, sentence_size, network_size, dataset_kind, tying=tying)
+    model = AugmentedModel(vocab_size, sentence_size, setting, tying=tying)
     model.compile()
-    model.fit(x_valid, y_valid, x_valid, y_valid, epochs=epochs)
+    model.fit_generator(train_generator, train_steps, valid_generator, valid_steps, epochs=epochs)
     model.save(MODEL_ROOT)
 
 

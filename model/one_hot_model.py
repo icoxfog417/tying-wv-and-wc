@@ -3,8 +3,9 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import Embedding, Dense, LSTM, Activation, Dropout
 from keras import backend as K
+from keras.callbacks import ModelCheckpoint, TensorBoard
 from model.lang_model_sgd import LangModelSGD
-from model.settings import DatasetSetting
+from model.setting import Setting
 
 
 class OneHotModel():
@@ -12,43 +13,33 @@ class OneHotModel():
     def __init__(self, 
         vocab_size, 
         sentence_size,
-        network_size="small",
-        dataset_kind="ptb"):
+        setting=None,
+        checkpoint_path="",
+        tensor_board=True):
 
-        self.network_size = network_size
-        self.dataset_kind = dataset_kind
         self.vocab_size = vocab_size
         self.sentence_size = sentence_size
-        self.vector_length = self.get_vector_length(network_size)
+        self.setting = setting if setting else Setting()
+        self.checkpoint_path = checkpoint_path
+        self.tensor_board = tensor_board
 
-        dset_setting = DatasetSetting.get(dataset_kind)
-        dropout = dset_setting["dropout"][network_size]
+        dropout = self.setting.dropout
+        vector_length = self.setting.vector_length
 
-        self.embedding = Embedding(self.vocab_size, self.vector_length, input_length=sentence_size)
-        #layer1 = LSTM(self.vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
-        #layer2 = LSTM(self.vector_length, return_sequences=False, dropout=dropout, recurrent_dropout=dropout)
-        cell = LSTM(self.vector_length, dropout=dropout, recurrent_dropout=dropout)
+        self.embedding = Embedding(self.vocab_size, vector_length, input_length=sentence_size)
+        #layer1 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
+        #layer2 = LSTM(vector_length, return_sequences=False, dropout=dropout, recurrent_dropout=dropout)
+        cell = LSTM(vector_length, dropout=dropout, recurrent_dropout=dropout)
         projection = Dense(self.vocab_size, activation="softmax")
         self.model = Sequential()
         self.model.add(self.embedding)
         self.model.add(cell)
         self.model.add(projection)
     
-    def get_vector_length(self, network_size):
-        if network_size == "small":
-            return 200
-        elif network_size == "medium":
-            return 650
-        elif network_size == "large":
-            return 1500
-        else:
-            return 200
-
     def compile(self):
-        sgd = LangModelSGD(self.network_size, self.dataset_kind)
         self.model.compile(
             loss="categorical_crossentropy",
-            optimizer=sgd,
+            optimizer=LangModelSGD(self.setting),
             metrics=["accuracy", self.perplexity]
             )
     
@@ -57,15 +48,47 @@ class OneHotModel():
         cross_entropy = K.categorical_crossentropy(y_pred, y_true)
         perplexity = K.pow(2.0, cross_entropy)
         return perplexity
-    
+
     def fit(self, x_train, y_train, x_test, y_test, batch_size=32, epochs=20):
         self.model.fit(
             x_train, y_train,
+            validation_data=(x_test, y_test),
             batch_size=batch_size,
             epochs=epochs,
-            callbacks=[self.model.optimizer.get_scheduler()]
+            callbacks=self._get_callbacks()
+        )
+
+    def fit_generator(self, train_generator, train_steps_per_epoch, test_generator, test_steps_per_epoch, epochs=20):
+        self.model.fit_generator(
+            generator,
+            steps_per_epoch,
+            validation_data=test_generator,
+            validation_steps=test_steps_per_epoch,
+            epochs=epochs,
+            callbacks=self._get_callbacks()
         )
     
+    def _get_callbacks(self):
+        callbacks = [self.model.optimizer.get_lr_scheduler()]
+        if self.checkpoint_path:
+            if not os.path.exists(self.checkpoint_path):
+                print("Make folder to save checkpoint file to {}".format(self.checkpoint_path))
+                os.mkdir(self.checkpoint_path)
+
+            file_name = "_".join([self.__class__.__name__.lower(), "{epoch:02d}", "{val_acc:.2f}"]) + ".h5"
+            save_callback = ModelCheckpoint(os.path.join(self.checkpoint_path, file_name), save_weights_only=True)
+            callbacks += [save_callback]
+
+            if self.tensor_board:
+                log_path = os.path.join(self.checkpoint_path, "tensor_board")
+                if not os.path.exists(log_path):
+                    print("Make folder to visualize on TensorBoard to {}".format(log_path))
+                    os.mkdir(log_path)
+                callbacks += [TensorBoard(log_path)]
+                print("invoke tensorboard at {}".format(log_path))
+
+        return callbacks
+
     def predict(self, words):
         x = np.zeros((1, self.sentence_size))
         for i, w in enumerate(words):
@@ -74,7 +97,7 @@ class OneHotModel():
         return pred
     
     def save(self, folder, suffix=""):
-        file_name = "_".join([self.__class__.__name__.lower() + suffix]) + ".h5"
+        file_name = self.__class__.__name__.lower() + "" if not suffix else "_" + suffix + ".h5"
         path = os.path.join(folder, file_name)
         self.model.save_weights(path)
         return path

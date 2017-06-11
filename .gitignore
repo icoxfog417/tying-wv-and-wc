@@ -103,3 +103,5 @@ ENV/
 data/
 trained_model/
 .DS_Store
+.vscode/
+log/

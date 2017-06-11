@@ -3,7 +3,6 @@ from keras.models import Sequential
 from keras.layers import Embedding, Dense, LSTM, Activation, Dropout, Lambda
 from model.lang_model_sgd import LangModelSGD
 from model.one_hot_model import OneHotModel
-from model.settings import DatasetSetting
 from keras import backend as K
 from keras.losses import kullback_leibler_divergence
 
@@ -13,19 +12,20 @@ class AugmentedModel(OneHotModel):
     def __init__(self, 
         vocab_size, 
         sentence_size,
-        network_size="small",
-        dataset_kind="ptb",
+        setting=None,
+        checkpoint_path="",
         temperature=10,
         tying=False):
 
-        super().__init__(vocab_size, sentence_size, network_size, dataset_kind)
+        super().__init__(vocab_size, sentence_size, setting, checkpoint_path)
         self.temperature = temperature
         self.tying = tying
-        self.gamma = DatasetSetting.get(dataset_kind)["gamma"]
+        self.gamma = self.setting.gamma
+        self.verbose = verbose
         self.model.pop()  # remove projection
 
         if tying:
-            self.model.add(Dense(self.vector_length))
+            self.model.add(Dense(self.setting.vector_length))
             self.model.add(Lambda(lambda x: K.dot(x, K.transpose(self.embedding.embeddings))))
             self.model.add(Activation("softmax"))
         else:
@@ -40,14 +40,12 @@ class AugmentedModel(OneHotModel):
         y_t = K.softmax(y_t / self.temperature)
         aug_loss = kullback_leibler_divergence(y_t, y_pred)
         loss += (self.gamma * self.temperature) * aug_loss
-
         return loss
 
     def compile(self):
-        sgd = LangModelSGD(self.network_size, self.dataset_kind)
         self.model.compile(
             loss=self.augmented_loss,
-            optimizer=sgd,
+            optimizer=LangModelSGD(self.setting),
             metrics=["accuracy", self.perplexity]
             )
 

@@ -4,21 +4,20 @@ import tensorflow as tf
 from keras import backend as K
 from keras.optimizers import Optimizer
 from keras.callbacks import LearningRateScheduler
-from model.settings import SizeSetting, DatasetSetting
+from model.setting import Setting
 
 
 class LangModelSGD(Optimizer):
 
-    def __init__(self, size_kind="small", dataset_kind="ptb"):
-        size_setting = SizeSetting.get(size_kind)
-        dset_setting = DatasetSetting.get(dataset_kind)
+    def __init__(self, setting, verbose=True):
         super(LangModelSGD, self).__init__()
         
         self.iterations = K.variable(0., name="iterations")
         self.lr = K.variable(1.0, name="lr")
-        self.epoch_interval = K.variable(size_setting["epoch_interval"])
-        self.decay = K.variable(size_setting["decay"], name="decay")
-        self._clipnorm = size_setting["norm_clipping"]
+        self.epoch_interval = K.variable(setting.epoch_interval)
+        self.decay = K.variable(setting.decay)
+        self._clipnorm = setting.norm_clipping
+        self.verbose = verbose
 
     def get_updates(self, params, constraints, loss):
         grads = self.get_gradients(loss, params)
@@ -38,14 +37,15 @@ class LangModelSGD(Optimizer):
         base_config = super(LangModelSGD, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    def get_scheduler(self):
+    def get_lr_scheduler(self):
         def scheduler(epoch):
             epoch_interval = K.get_value(self.epoch_interval)
             if epoch != 0 and (epoch + 1) % epoch_interval == 0:
                 lr = K.get_value(self.lr)
                 decay = K.get_value(self.decay)
                 K.set_value(self.lr, lr * decay)
-                print(self.get_config())
+                if self.verbose:
+                    print(self.get_config())
             return K.get_value(self.lr)
     
         return LearningRateScheduler(scheduler)
