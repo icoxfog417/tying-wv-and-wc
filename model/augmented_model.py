@@ -21,7 +21,6 @@ class AugmentedModel(OneHotModel):
         self.temperature = temperature
         self.tying = tying
         self.gamma = self.setting.gamma
-        self.verbose = verbose
         self.model.pop()  # remove projection
 
         if tying:
@@ -48,6 +47,9 @@ class AugmentedModel(OneHotModel):
             optimizer=LangModelSGD(self.setting),
             metrics=["accuracy", self.perplexity]
             )
+
+    def get_name(self):
+        return self.__class__.__name__.lower() + "_tying" if self.tying else ""
 
     def save(self, folder, suffix=""):
         suffix = "tying" if self.tying else ""

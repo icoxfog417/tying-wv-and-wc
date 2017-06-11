@@ -8,10 +8,12 @@ from model.setting import ProposedSetting
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
+LOG_ROOT = os.path.join(os.path.dirname(__file__), "log")
 MODEL_ROOT = os.path.join(os.path.dirname(__file__), "trained_model")
 
 
 def prepare_dataset(dataset_kind):
+    dp = DataProcessor()
     if dataset_kind == "ptb":
         dataset = dp.get_ptb(DATA_ROOT, vocab_size=10000, force=True)
     else:
@@ -32,7 +34,7 @@ def train_baseline(network_size, dataset_kind, epochs=40, skip=3):
     valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sentence_size=sentence_size, skip=skip)
 
     # make one hot model
-    model = OneHotModel(vocab_size, sentence_size, setting)
+    model = OneHotModel(vocab_size, sentence_size, setting, LOG_ROOT)
     model.compile()
     model.fit_generator(train_generator, train_steps, valid_generator, valid_steps, epochs=epochs)
     model.save(MODEL_ROOT)
@@ -50,7 +52,8 @@ def train_augmented(network_size, dataset_kind, tying=False, epochs=40, skip=3):
     valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sentence_size=sentence_size, skip=skip)
 
     # make one hot model
-    model = AugmentedModel(vocab_size, sentence_size, setting, tying=tying)
+    checkpoint_path = os.path.join(LOG_ROOT, "augmented" + "_tying" if tying else "")
+    model = AugmentedModel(vocab_size, sentence_size, setting, tying=tying, checkpoint_path=checkpoint_path)
     model.compile()
     model.fit_generator(train_generator, train_steps, valid_generator, valid_steps, epochs=epochs)
     model.save(MODEL_ROOT)
@@ -70,6 +73,10 @@ if __name__ == "__main__":
 
     n_size = args.nsize
     dataset = args.dataset
+
+    if not os.path.exists(LOG_ROOT):
+        os.mkdir(LOG_ROOT)
+
     if args.aug or args.tying:
         print("Use Augmented Model (tying={})".format(args.tying))
         train_augmented(n_size, dataset, args.tying, args.epochs, args.skip)

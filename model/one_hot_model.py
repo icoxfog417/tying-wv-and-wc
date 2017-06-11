@@ -58,7 +58,7 @@ class OneHotModel():
             callbacks=self._get_callbacks()
         )
 
-    def fit_generator(self, train_generator, train_steps_per_epoch, test_generator, test_steps_per_epoch, epochs=20):
+    def fit_generator(self, generator, steps_per_epoch, test_generator, test_steps_per_epoch, epochs=20):
         self.model.fit_generator(
             generator,
             steps_per_epoch,
@@ -70,24 +70,32 @@ class OneHotModel():
     
     def _get_callbacks(self):
         callbacks = [self.model.optimizer.get_lr_scheduler()]
+        folder_name = self.get_name()
+        self_path = os.path.join(self.checkpoint_path, folder_name)
         if self.checkpoint_path:
             if not os.path.exists(self.checkpoint_path):
                 print("Make folder to save checkpoint file to {}".format(self.checkpoint_path))
                 os.mkdir(self.checkpoint_path)
+                os.mkdir(self_path)
 
-            file_name = "_".join([self.__class__.__name__.lower(), "{epoch:02d}", "{val_acc:.2f}"]) + ".h5"
-            save_callback = ModelCheckpoint(os.path.join(self.checkpoint_path, file_name), save_weights_only=True)
+            file_name = "_".join(["model_weights", "{epoch:02d}", "{val_acc:.2f}"]) + ".h5"
+            save_callback = ModelCheckpoint(os.path.join(self_path, file_name), save_weights_only=True)
             callbacks += [save_callback]
 
             if self.tensor_board:
-                log_path = os.path.join(self.checkpoint_path, "tensor_board")
-                if not os.path.exists(log_path):
-                    print("Make folder to visualize on TensorBoard to {}".format(log_path))
-                    os.mkdir(log_path)
-                callbacks += [TensorBoard(log_path)]
-                print("invoke tensorboard at {}".format(log_path))
+                board_path = os.path.join(self.checkpoint_path, "tensor_board")
+                self_board_path = os.path.join(board_path, folder_name)
+                if not os.path.exists(board_path):
+                    print("Make folder to visualize on TensorBoard to {}".format(board_path))
+                    os.mkdir(board_path)
+                    os.mkdir(self_board_path)
+                callbacks += [TensorBoard(self_board_path)]
+                print("invoke tensorboard at {}".format(board_path))
 
         return callbacks
+
+    def get_name(self):
+        return self.__class__.__name__.lower()
 
     def predict(self, words):
         x = np.zeros((1, self.sentence_size))
