@@ -15,9 +15,9 @@ MODEL_ROOT = os.path.join(os.path.dirname(__file__), "trained_model")
 def prepare_dataset(dataset_kind):
     dp = DataProcessor()
     if dataset_kind == "ptb":
-        dataset = dp.get_ptb(DATA_ROOT, vocab_size=10000, force=True)
+        dataset = dp.get_ptb(DATA_ROOT, vocab_size=10000)
     else:
-        dataset = dp.get_wiki2(DATA_ROOT, vocab_size=30000, force=True)
+        dataset = dp.get_wiki2(DATA_ROOT, vocab_size=30000)
 
     return dataset
 
