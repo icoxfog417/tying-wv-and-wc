@@ -49,7 +49,7 @@ class AugmentedModel(OneHotModel):
             )
 
     def get_name(self):
-        return self.__class__.__name__.lower() + "_tying" if self.tying else ""
+        return self.__class__.__name__.lower() + ("_tying" if self.tying else "")
 
     def save(self, folder, suffix=""):
         suffix = "tying" if self.tying else ""

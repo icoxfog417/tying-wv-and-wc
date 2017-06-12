@@ -52,8 +52,7 @@ def train_augmented(network_size, dataset_kind, tying=False, epochs=40, skip=3):
     valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sentence_size=sentence_size, skip=skip)
 
     # make one hot model
-    checkpoint_path = os.path.join(LOG_ROOT, "augmented" + "_tying" if tying else "")
-    model = AugmentedModel(vocab_size, sentence_size, setting, tying=tying, checkpoint_path=checkpoint_path)
+    model = AugmentedModel(vocab_size, sentence_size, setting, tying=tying, checkpoint_path=LOG_ROOT)
     model.compile()
     model.fit_generator(train_generator, train_steps, valid_generator, valid_steps, epochs=epochs)
     model.save(MODEL_ROOT)
