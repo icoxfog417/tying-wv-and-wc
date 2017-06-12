@@ -2,6 +2,7 @@ import os
 import numpy as np
 from keras.models import Sequential
 from keras.layers import Embedding, Dense, LSTM, Activation, Dropout
+from keras import losses
 from keras import backend as K
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from model.lang_model_sgd import LangModelSGD
@@ -38,7 +39,7 @@ class OneHotModel():
     
     def compile(self):
         self.model.compile(
-            loss="categorical_crossentropy",
+            loss=losses.categorical_crossentropy,
             optimizer=LangModelSGD(self.setting),
             metrics=["accuracy", self.perplexity]
             )
