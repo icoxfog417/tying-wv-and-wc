@@ -76,6 +76,7 @@ class OneHotModel():
             if not os.path.exists(self.checkpoint_path):
                 print("Make folder to save checkpoint file to {}".format(self.checkpoint_path))
                 os.mkdir(self.checkpoint_path)
+            if not os.path.exists(self_path):
                 os.mkdir(self_path)
 
             file_name = "_".join(["model_weights", "{epoch:02d}", "{val_acc:.2f}"]) + ".h5"
@@ -88,6 +89,7 @@ class OneHotModel():
                 if not os.path.exists(board_path):
                     print("Make folder to visualize on TensorBoard to {}".format(board_path))
                     os.mkdir(board_path)
+                if not os.path.exists(self_board_path):
                     os.mkdir(self_board_path)
                 callbacks += [TensorBoard(self_board_path)]
                 print("invoke tensorboard at {}".format(board_path))
