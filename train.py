@@ -31,7 +31,7 @@ def train_baseline(network_size, dataset_kind, epochs=40, skip=3):
 
     dp = DataProcessor()
     train_steps, train_generator = dp.make_batch_iter(dataset, sentence_size=sentence_size, skip=skip)
-    valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sentence_size=sentence_size, skip=skip)
+    valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sentence_size=sentence_size)
 
     # make one hot model
     model = OneHotModel(vocab_size, sentence_size, setting, LOG_ROOT)
@@ -49,7 +49,7 @@ def train_augmented(network_size, dataset_kind, tying=False, epochs=40, skip=3):
 
     dp = DataProcessor()
     train_steps, train_generator = dp.make_batch_iter(dataset, sentence_size=sentence_size, skip=skip)
-    valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sentence_size=sentence_size, skip=skip)
+    valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sentence_size=sentence_size)
 
     # make one hot model
     model = AugmentedModel(vocab_size, sentence_size, setting, tying=tying, checkpoint_path=LOG_ROOT)
