@@ -28,13 +28,15 @@ class OneHotModel():
         vector_length = self.setting.vector_length
 
         self.embedding = Embedding(self.vocab_size, vector_length, input_length=sentence_size)
-        #layer1 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
-        #layer2 = LSTM(vector_length, return_sequences=False, dropout=dropout, recurrent_dropout=dropout)
-        cell = LSTM(vector_length, dropout=dropout, recurrent_dropout=dropout)
+        layer1 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
+        layer2 = LSTM(vector_length, return_sequences=False, dropout=dropout, recurrent_dropout=dropout)
+        #cell = LSTM(vector_length, dropout=dropout, recurrent_dropout=dropout)
         projection = Dense(self.vocab_size, activation="softmax")
         self.model = Sequential()
         self.model.add(self.embedding)
-        self.model.add(cell)
+        self.model.add(layer1)
+        self.model.add(layer2)
+        #self.model.add(cell)
         self.model.add(projection)
     
     def compile(self):
