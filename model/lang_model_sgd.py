@@ -49,28 +49,3 @@ class LangModelSGD(Optimizer):
             return K.get_value(self.lr)
     
         return LearningRateScheduler(scheduler)
-
-
-# because of https://github.com/fchollet/keras/pull/6859
-
-def clip_norm(g, c, n):
-    if c > 0:
-        condition = n >= c
-        then_expression = tf.scalar_mul(c / n, g)
-        else_expression = g
-
-        if isinstance(then_expression, tf.Tensor):
-            g_shape = copy.copy(then_expression.get_shape())
-        elif isinstance(then_expression, tf.IndexedSlices):
-            g_shape = copy.copy(then_expression.dense_shape)
-        if condition.dtype != tf.bool:
-            condition = tf.cast(condition, "bool")
-        g = tf.cond(condition,
-            lambda: then_expression,
-            lambda: else_expression)
-        if isinstance(then_expression, tf.Tensor):
-            g.set_shape(g_shape)
-        elif isinstance(then_expression, tf.IndexedSlices):
-            g._dense_shape = g_shape
-
-    return g
