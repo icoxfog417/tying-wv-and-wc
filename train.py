@@ -22,7 +22,7 @@ def prepare_dataset(dataset_kind):
     return dataset
 
 
-def train_baseline(network_size, dataset_kind, epochs=40, skip=3):
+def train_baseline(network_size, dataset_kind, epochs=20, skip=3):
     # prepare the data
     setting = ProposedSetting(network_size, dataset_kind)
     dataset = prepare_dataset(dataset_kind)
@@ -40,7 +40,7 @@ def train_baseline(network_size, dataset_kind, epochs=40, skip=3):
     model.save(MODEL_ROOT)
 
 
-def train_augmented(network_size, dataset_kind, tying=False, epochs=40, skip=3):
+def train_augmented(network_size, dataset_kind, tying=False, epochs=20, skip=3):
     # prepare the data
     setting = ProposedSetting(network_size, dataset_kind)
     dataset = prepare_dataset(dataset_kind)
@@ -66,7 +66,7 @@ if __name__ == "__main__":
                         help="use tying model")
     parser.add_argument("--nsize", default="small", help="network size (small, medium, large)")
     parser.add_argument("--dataset", default="ptb", help="dataset kind (ptb or wiki2)")
-    parser.add_argument("--epochs", type=int, default=40, help="epoch to train")
+    parser.add_argument("--epochs", type=int, default=20, help="epoch to train")
     parser.add_argument("--skip", type=int, default=1, help="skip size of sentence")
     args = parser.parse_args()
 
