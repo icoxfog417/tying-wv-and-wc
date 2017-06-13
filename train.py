@@ -27,7 +27,7 @@ def train_baseline(network_size, dataset_kind, epochs=40, skip=3):
     setting = ProposedSetting(network_size, dataset_kind)
     dataset = prepare_dataset(dataset_kind)
     vocab_size = len(dataset.vocab_data())
-    sentence_size = 35
+    sentence_size = 20 if dataset_kind == "ptb" else 35
 
     dp = DataProcessor()
     train_steps, train_generator = dp.make_batch_iter(dataset, sentence_size=sentence_size, skip=skip)
@@ -45,7 +45,7 @@ def train_augmented(network_size, dataset_kind, tying=False, epochs=40, skip=3):
     setting = ProposedSetting(network_size, dataset_kind)
     dataset = prepare_dataset(dataset_kind)
     vocab_size = len(dataset.vocab_data())
-    sentence_size = 35
+    sentence_size = 20 if dataset_kind == "ptb" else 35
 
     dp = DataProcessor()
     train_steps, train_generator = dp.make_batch_iter(dataset, sentence_size=sentence_size, skip=skip)

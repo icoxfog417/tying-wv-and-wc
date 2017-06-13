@@ -17,7 +17,7 @@ class DataProcessor():
         r_idx = r.to_indexed().make_vocab(vocab_size=vocab_size, force=force)
         return r_idx
     
-    def make_batch_iter(self, r_idx, kind="train", batch_size=32, sentence_size=35, skip=1):
+    def make_batch_iter(self, r_idx, kind="train", batch_size=20, sentence_size=35, skip=1):
         # count all tokens
         word_count = 0
         path = r_idx.train_file_path
