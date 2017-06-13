@@ -48,9 +48,8 @@ class OneHotModel():
     
     @classmethod
     def perplexity(cls, y_true, y_pred):
-        cross_entropy = K.categorical_crossentropy(y_pred, y_true)
-        perplexity = K.pow(2.0, cross_entropy)
-        perplexity = K.mean(perplexity)
+        cross_entropy = K.mean(K.categorical_crossentropy(y_pred, y_true))
+        perplexity = K.exp(cross_entropy)
         return perplexity
 
     def fit(self, x_train, y_train, x_test, y_test, batch_size=32, epochs=20):
