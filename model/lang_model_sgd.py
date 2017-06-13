@@ -10,20 +10,16 @@ from model.setting import Setting
 class LangModelSGD(Optimizer):
 
     def __init__(self, setting, verbose=True):
-        super(LangModelSGD, self).__init__()
+        super(LangModelSGD, self).__init__(clipnorm=setting.norm_clipping)
         
         self.iterations = K.variable(0., name="iterations")
         self.lr = K.variable(1.0, name="lr")
         self.epoch_interval = K.variable(setting.epoch_interval)
         self.decay = K.variable(setting.decay)
-        self._clipnorm = setting.norm_clipping
         self.verbose = verbose
 
     def get_updates(self, params, constraints, loss):
         grads = self.get_gradients(loss, params)
-        norm = K.sqrt(sum([K.sum(K.square(g)) for g in grads]))
-        grads = [clip_norm(g, self._clipnorm, norm) for g in grads]
-
         self.updates = []
         self.updates.append(K.update_add(self.iterations, 1))
         for p, g in zip(params, grads):
