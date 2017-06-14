@@ -1,5 +1,6 @@
 import chazutsu
 import numpy as np
+from keras.utils import to_categorical
 
 
 class DataProcessor():
@@ -17,7 +18,7 @@ class DataProcessor():
         r_idx = r.to_indexed().make_vocab(vocab_size=vocab_size, force=force)
         return r_idx
     
-    def make_batch_iter(self, r_idx, kind="train", batch_size=20, sentence_size=35, skip=1):
+    def make_batch_iter(self, r_idx, kind="train", batch_size=20, sequence_size=35, skip=1):
         # count all tokens
         word_count = 0
         path = r_idx.train_file_path
@@ -32,12 +33,12 @@ class DataProcessor():
                 word_count += len(words)
         
         vocab_size = len(r_idx.vocab_data())
-        sentence_count = (word_count - sentence_size) / skip + 1
+        sentence_count = (word_count - sequence_size) / skip + 1
         steps_per_epoch = sentence_count // batch_size
 
         def generator():
             while True:
-                batch_seq_length = (batch_size - 1) * skip + sentence_size
+                batch_seq_length = (batch_size - 1) * skip + sequence_size
                 with open(path, encoding="utf-8") as f:
                     buffer = []
                     sentences = None
@@ -46,7 +47,7 @@ class DataProcessor():
                         words = r_idx.str_to_ids(line.strip())
                         buffer += words
                         if len(buffer) >= batch_seq_length:
-                            _sentences, _one_hots = self.format(buffer, vocab_size, sentence_size, skip=skip)
+                            _sentences, _one_hots = self.format(buffer, vocab_size, sequence_size, skip=skip)
                             buffer = buffer[(len(_sentences) * skip):]
 
                             if sentences is None:
@@ -63,18 +64,17 @@ class DataProcessor():
         return steps_per_epoch, generator()
 
 
-    def format(self, word_seq, vocab_size, sentence_size=35, skip=1):
+    def format(self, word_seq, vocab_size, sequence_size=35, skip=1):
         sentences = []
         next_words = []
         index = 0
-        for i in range(0, len(word_seq) - sentence_size, skip):
-            sentences.append(word_seq[i:i + sentence_size])
-            nw = word_seq[i + sentence_size]
-            next_words.append(nw)
+        for i in range(0, len(word_seq) - sequence_size, skip):
+            sentences.append(word_seq[i:i + sequence_size])
+            n_words = word_seq[(i + 1):(i + 1 + sequence_size)]
+            n_words = to_categorical(n_words, vocab_size)  # to one hot vector
+            next_words.append(n_words)
         
         sentences = np.array(sentences)
-        one_hots = np.zeros((len(next_words), vocab_size))
-        for i, nw in enumerate(next_words):
-            one_hots[i][nw] = 1
+        next_words = np.array(next_words)
 
-        return sentences, one_hots
+        return sentences, next_words

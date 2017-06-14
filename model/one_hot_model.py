@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from keras.models import Sequential
-from keras.layers import Embedding, Dense, LSTM, Activation, Dropout
+from keras.layers import Embedding, Dense, TimeDistributed, LSTM, Activation, Dropout
 from keras import losses
 from keras import backend as K
 from keras.callbacks import ModelCheckpoint, TensorBoard
@@ -13,13 +13,13 @@ class OneHotModel():
     
     def __init__(self, 
         vocab_size, 
-        sentence_size,
+        sequence_size,
         setting=None,
         checkpoint_path="",
         tensor_board=True):
 
         self.vocab_size = vocab_size
-        self.sentence_size = sentence_size
+        self.sequence_size = sequence_size
         self.setting = setting if setting else Setting()
         self.checkpoint_path = checkpoint_path
         self.tensor_board = tensor_board
@@ -27,17 +27,16 @@ class OneHotModel():
         dropout = self.setting.dropout
         vector_length = self.setting.vector_length
 
-        self.embedding = Embedding(self.vocab_size, vector_length, input_length=sentence_size)
+        self.embedding = Embedding(self.vocab_size, vector_length, input_length=sequence_size)
         layer1 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
-        layer2 = LSTM(vector_length, return_sequences=False, dropout=dropout, recurrent_dropout=dropout)
-        #cell = LSTM(vector_length, dropout=dropout, recurrent_dropout=dropout)
+        layer2 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
         projection = Dense(self.vocab_size, activation="softmax")
+        map_projection = TimeDistributed(projection)
         self.model = Sequential()
         self.model.add(self.embedding)
         self.model.add(layer1)
         self.model.add(layer2)
-        #self.model.add(cell)
-        self.model.add(projection)
+        self.model.add(map_projection)
     
     def compile(self):
         self.model.compile(
@@ -103,11 +102,14 @@ class OneHotModel():
         return self.__class__.__name__.lower()
 
     def predict(self, words):
-        x = np.zeros((1, self.sentence_size))
+        x = np.zeros((1, self.sequence_size))  # batch size 1 x sequence_size
         for i, w in enumerate(words):
             x[0][i] = w
-        pred = self.model.predict(x)[0]
-        return pred
+        pred = self.model.predict(x)[0]  # get first batch's prediction
+        # pred.shape = sequence_size x vocab_size
+        pred = pred[:len(words)]  # extract next words of given words
+        pred_words = np.argmax(pred, axis=1)
+        return pred_words
     
     def save(self, folder, suffix=""):
         file_name = self.__class__.__name__.lower() + "" if not suffix else "_" + suffix + ".h5"
