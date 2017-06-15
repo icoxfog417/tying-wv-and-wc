@@ -24,9 +24,9 @@ class AugmentedModel(OneHotModel):
 
         if tying:
             self.model.pop()  # remove projection
-            self.model.add(TimeDistributed(Dense(self.setting.vector_length)))
+            #self.model.add(TimeDistributed(Dense(self.setting.vector_length)))
             self.model.add(Lambda(lambda x: K.dot(x, K.transpose(self.embedding.embeddings))))
-            self.model.add(Activation("softmax"))
+            self.model.add(TimeDistributed(Activation("softmax")))
 
     def augmented_loss(self, y_true, y_pred):
         loss = K.categorical_crossentropy(y_pred, y_true)

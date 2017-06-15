@@ -35,7 +35,7 @@ class OneHotModel():
         self.model = Sequential()
         self.model.add(self.embedding)
         self.model.add(layer1)
-        self.model.add(layer2)
+        #self.model.add(layer2)
         self.model.add(map_projection)
     
     def compile(self):

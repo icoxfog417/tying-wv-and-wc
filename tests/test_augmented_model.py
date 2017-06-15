@@ -30,7 +30,7 @@ class TestAugmentedModel(unittest.TestCase):
         loss = model.augmented_loss(y_true, y_pred)
         self.assertTrue(loss is not None)
 
-    def xtest_model(self):
+    def test_model(self):
         vocab_size = 10
         sequence_size = 20
 
