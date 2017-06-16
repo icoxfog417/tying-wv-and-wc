@@ -19,7 +19,7 @@ class TestOneHotModel(unittest.TestCase):
         test_seq = np.random.randint(vocab_size, size=sequence_size)
         samples = np.tile(test_seq, 10)
         x, y = dp.format(samples, vocab_size, sequence_size)
-        x_t, y_t = dp.format(samples, vocab_size, sequence_size, skip=1)
+        x_t, y_t = dp.format(samples, vocab_size, sequence_size)
 
         model = OneHotModel(vocab_size, sequence_size, checkpoint_path=checkpoint_path)
         model.compile()
