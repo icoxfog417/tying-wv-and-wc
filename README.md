@@ -33,4 +33,21 @@ To use the distribution type loss and input embedding and output projection equi
 
 ### Result
 
-Now comming
+![result.PNG](./doc/result.PNG)
+
+* By the quick/small corpus experiment, I confirmed strong regularization effect by using proposed method.
+* Temperature affects training speed (is this the trade-off of training and regularization?)
+* (I could not confirm the suppression of quantifier (like `a`, `the`)).
+* You can run this experiment by `python tests/evaluation.py`
+
+![result_ptb.PNG](./doc/result_ptb.PNG)
+
+* But when using Penn Treebank dataset, augmented & tying model needs much more time to exceed the baseline (LSTM).
+* I set `--skip 3` to reduce the dataset size. This may affect this result.
+* You can run this experiment by `python train.py`
+
+## Hypothesis
+
+* At the beginning of the training, embedding matrix to produce "teacher distribution" is not trained yet. So proposed method has a handicap in the first phase.
+* So to increase temperature (alpha) gradually will improve training speed.
+* To use the pre-trained word vector, fix the embedding matrix weight for some interval (fixed target technique at the reinforcement learning (please refer [*Deep Reinforcement Learning*](http://www.iclr.cc/lib/exe/fetch.php?media=iclr2015:silver-iclr2015.pdf))) will also improve the training.
