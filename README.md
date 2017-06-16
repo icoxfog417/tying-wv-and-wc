@@ -36,6 +36,7 @@ To use the distribution type loss and input embedding and output projection equi
 ![result.PNG](./doc/result.PNG)
 
 * By the quick/small corpus experiment, I confirmed strong regularization effect by using proposed method.
+  * `augmentedmodel` and `augmentedmodel_tying` outperforms the baseline (`onehotmodel`)!
 * Temperature affects training speed (is this the trade-off of training and regularization?)
 * (I could not confirm the suppression of quantifier (like `a`, `the`)).
 * You can run this experiment by `python tests/evaluation.py`
