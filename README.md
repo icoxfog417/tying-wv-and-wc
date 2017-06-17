@@ -44,7 +44,7 @@ To use the distribution type loss and input embedding and output projection equi
 ![result_ptb.PNG](./doc/result_ptb.PNG)
 
 * But when using Penn Treebank dataset, augmented & tying model needs much more time to exceed the baseline (LSTM).
-* I set `--skip 3` to reduce the dataset size. This may affect this result.
+* I set `--skip 3` to reduce the dataset size. This may affect this result (augmented loss calculation takes cost because it requires multiplication with embedding matrix (large size matrix), so training speed is a little bit slow).
 * You can run this experiment by `python train.py`
 
 ## Hypothesis
@@ -52,3 +52,5 @@ To use the distribution type loss and input embedding and output projection equi
 * At the beginning of the training, embedding matrix to produce "teacher distribution" is not trained yet. So proposed method has a handicap in the first phase.
 * So to increase temperature (alpha) gradually will improve training speed.
 * To use the pre-trained word vector, fix the embedding matrix weight for some interval (fixed target technique at the reinforcement learning (please refer [*Deep Reinforcement Learning*](http://www.iclr.cc/lib/exe/fetch.php?media=iclr2015:silver-iclr2015.pdf))) will also improve the training.
+
+**By the way,  [PyTorch example already use tying method](https://github.com/pytorch/examples/blob/1c6d9d276f3a0c484226996ab7f9df4f90ce52f4/word_language_model/model.py#L28)! Don't be afraid to use it!**
