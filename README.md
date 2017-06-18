@@ -2,13 +2,19 @@
 
 Implementation for "[Tying Word Vectors and Word Classifiers: A Loss Framework for Language Modeling](https://arxiv.org/abs/1611.01462)"
 
+This paper tries to utilize the diversity of word meaning to train the Deep Neural Network.
+
 ## Summary of Paper
 
 ### Motivation
 
-In the language modeling, we want to express the likelihood of the word. Ordinary one-hot vector teaching is not suitable to achieve it. Because any similar words ignored, but the exact answer word.
+In the language modeling (prediction of the word sequence), we want to express the diversity of word meaning.  
+For example, when predicting the word next to "Banana is delicious ___", the answer is "fruit", but "sweets", "food" is also ok.
+But ordinary one-hot vector teaching is not suitable to achieve it. Because any similar words ignored, but the exact answer word.
 
 ![motivation.PNG](./doc/motivation.PNG)
+
+If we can use not one-hot but "distribution", we can teach this variety.
 
 ### Method
 
