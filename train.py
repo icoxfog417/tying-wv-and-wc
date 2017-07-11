@@ -22,7 +22,7 @@ def prepare_dataset(dataset_kind):
     return dataset
 
 
-def train_baseline(network_size, dataset_kind, epochs=40, skip=1):
+def train_baseline(network_size, dataset_kind, epochs=40):
     # prepare the data
     setting = ProposedSetting(network_size, dataset_kind)
     dataset = prepare_dataset(dataset_kind)
@@ -30,7 +30,7 @@ def train_baseline(network_size, dataset_kind, epochs=40, skip=1):
     sequence_size = 35
 
     dp = DataProcessor()
-    train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size, skip=skip)
+    train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size)
     valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sequence_size=sequence_size)
 
     # make one hot model
@@ -40,7 +40,7 @@ def train_baseline(network_size, dataset_kind, epochs=40, skip=1):
     model.save(MODEL_ROOT)
 
 
-def train_augmented(network_size, dataset_kind, tying=False, epochs=40, skip=1):
+def train_augmented(network_size, dataset_kind, tying=False, epochs=40):
     # prepare the data
     setting = ProposedSetting(network_size, dataset_kind)
     dataset = prepare_dataset(dataset_kind)
@@ -48,7 +48,7 @@ def train_augmented(network_size, dataset_kind, tying=False, epochs=40, skip=1):
     sequence_size = 35
 
     dp = DataProcessor()
-    train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size, skip=skip)
+    train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size)
     valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sequence_size=sequence_size)
 
     # make one hot model
@@ -67,7 +67,6 @@ if __name__ == "__main__":
     parser.add_argument("--nsize", default="small", help="network size (small, medium, large)")
     parser.add_argument("--dataset", default="ptb", help="dataset kind (ptb or wiki2)")
     parser.add_argument("--epochs", type=int, default=40, help="epoch to train")
-    parser.add_argument("--skip", type=int, default=1, help="skip size of sentence")
     args = parser.parse_args()
 
     n_size = args.nsize
@@ -78,6 +77,6 @@ if __name__ == "__main__":
 
     if args.aug or args.tying:
         print("Use Augmented Model (tying={})".format(args.tying))
-        train_augmented(n_size, dataset, args.tying, args.epochs, args.skip)
+        train_augmented(n_size, dataset, args.tying, args.epochs)
     else:
-        train_baseline(n_size, dataset, args.epochs, args.skip)
+        train_baseline(n_size, dataset, args.epochs)

@@ -12,11 +12,16 @@ class TestDataProcessor(unittest.TestCase):
 
     def test_format(self):
         dp = DataProcessor()
-        samples = np.array(list(range(5)) * 2)
-        x, y = dp.format(samples, 5, 3)
+        samples = np.array([-1] + list(range(10)))
+        x, y = dp.format(samples, 10, 5)
 
-        self.assertEqual(x.shape, (7, 3))
-        self.assertEqual(y.shape, (7, 3, 5))
+        # x          | y
+        # ----------------------
+        # -1 0 1 2 3 | 0 1 2 3 4
+        #  4 5 6 7 8 | 5 6 7 8 9
+
+        self.assertEqual(x.shape, (2, 5))
+        self.assertEqual(y.shape, (2, 5, 10))
         for i in range(x.shape[0]):
             self.assertEqual(x[i][1:].tolist(), np.argmax(y[i][:-1], axis=1).flatten().tolist())
 
@@ -31,9 +36,8 @@ class TestDataProcessor(unittest.TestCase):
         dp = DataProcessor()
         batch_size = 10
         sequence_size = 15
-        skip = 2
         vocab_size = len(r_idx.vocab_data())
-        steps_per_epoch, generator = dp.make_batch_iter(r_idx, "valid", batch_size, sequence_size, skip=skip)
+        steps_per_epoch, generator = dp.make_batch_iter(r_idx, "valid", batch_size, sequence_size)
 
         words_in_batch = sequence_size * batch_size
         check_count = 5
@@ -45,18 +49,16 @@ class TestDataProcessor(unittest.TestCase):
                 if len(words) > max_count:
                     break
         
-        print(words_in_batch)
-        index = 0
-        for i in range(5):
+        for i in range(check_count):
             X, y = next(generator)
             self.assertEqual(X.shape, (batch_size, sequence_size))
             self.assertEqual(y.shape, (batch_size, sequence_size, vocab_size))
             for r in range(X.shape[0]):
-                sen = words[index + (r * skip):][:sequence_size]
-                next_sen = words[index + (r * skip) + 1:][:sequence_size]
-                self.assertEqual(X[r].tolist(), sen)
-                self.assertEqual(np.argmax(y[r], axis=1).flatten().tolist(), next_sen)
-            index += batch_size * skip
+                index = i * words_in_batch
+                seq = words[index + r*sequence_size:][:sequence_size]
+                next_seq = words[index + r*sequence_size + 1:][:sequence_size]
+                self.assertEqual(X[r].tolist(), seq)
+                self.assertEqual(np.argmax(y[r], axis=1).flatten().tolist(), next_seq)
         
         generator = None
         shutil.rmtree(data_root)

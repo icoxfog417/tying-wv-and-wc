@@ -18,7 +18,7 @@ class DataProcessor():
         r_idx = r.to_indexed().make_vocab(vocab_size=vocab_size, force=force)
         return r_idx
     
-    def make_batch_iter(self, r_idx, kind="train", batch_size=20, sequence_size=35, skip=1):
+    def make_batch_iter(self, r_idx, kind="train", batch_size=20, sequence_size=35):
         # count all tokens
         word_count = 0
         path = r_idx.train_file_path
@@ -33,48 +33,39 @@ class DataProcessor():
                 word_count += len(words)
         
         vocab_size = len(r_idx.vocab_data())
-        sentence_count = (word_count - sequence_size) / skip + 1
-        steps_per_epoch = sentence_count // batch_size
+        sequence_count = word_count // sequence_size
+        steps_per_epoch = sequence_count // batch_size
 
         def generator():
             while True:
-                batch_seq_length = (batch_size - 1) * skip + sequence_size
+                buffer = []
                 with open(path, encoding="utf-8") as f:
-                    buffer = []
-                    sentences = None
-                    one_hots = None
                     for line in f:
                         words = r_idx.str_to_ids(line.strip())
                         buffer += words
-                        if len(buffer) >= batch_seq_length:
-                            _sentences, _one_hots = self.format(buffer, vocab_size, sequence_size, skip=skip)
-                            buffer = buffer[(len(_sentences) * skip):]
+                        if len(buffer) > sequence_size * batch_size:
+                            cut_size = sequence_size * batch_size
+                            _seq = buffer[:cut_size + 1]  # +1 for next word
+                            words, nexts = self.format(_seq, vocab_size, sequence_size)
+                            buffer = buffer[cut_size:]
 
-                            if sentences is None:
-                                sentences = _sentences
-                                one_hots = _one_hots
-                            else:
-                                sentences = np.vstack((sentences, _sentences))
-                                one_hots = np.vstack((one_hots, _one_hots))
+                            yield words, nexts
 
-                            while len(sentences) >= batch_size:
-                                yield sentences[:batch_size, :], one_hots[:batch_size, :]
-                                sentences = sentences[batch_size:, :]
-                                one_hots = one_hots[batch_size:, :]
         return steps_per_epoch, generator()
 
 
-    def format(self, word_seq, vocab_size, sequence_size=35, skip=1):
-        sentences = []
-        next_words = []
-        index = 0
-        for i in range(0, len(word_seq) - sequence_size, skip):
-            sentences.append(word_seq[i:i + sequence_size])
-            n_words = word_seq[(i + 1):(i + 1 + sequence_size)]
-            n_words = to_categorical(n_words, vocab_size)  # to one hot vector
-            next_words.append(n_words)
+    def format(self, word_seq, vocab_size, sequence_size):
+        words = []
+        nexts = []
+        sequence_count = (len(word_seq) - 1) // sequence_size
+        for i in range(sequence_count):
+            start = i * sequence_size
+            words.append(word_seq[start:start + sequence_size])
+            next_seq = word_seq[(start + 1):(start + 1 + sequence_size)]
+            next_seq_as_one_hot = to_categorical(next_seq, vocab_size)  # to one hot vector
+            nexts.append(next_seq_as_one_hot)
         
-        sentences = np.array(sentences)
-        next_words = np.array(next_words)
+        words = np.array(words)
+        nexts = np.array(nexts)
 
-        return sentences, next_words
+        return words, nexts
