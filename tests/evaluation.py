@@ -18,6 +18,7 @@ def main(kind, epoch):
         os.mkdir(EVAL_ROOT)
     
     sequence_size = 20
+    stride_count = sequence_size
 
     #train_seq = sample_generator(vocab_size, 10000)
     #valid_seq = sample_generator(vocab_size, 2000)
@@ -33,8 +34,28 @@ def main(kind, epoch):
     print("{} train, {} valid ({} vocab)".format(len(train_seq), len(valid_seq), len(vocab)))
 
     dp = DataProcessor()
-    x, y = dp.format(train_seq, vocab_size, sequence_size)
-    x_t, y_t = dp.format(valid_seq, vocab_size, sequence_size)
+    x = None
+    y = None
+    x_t = None
+    y_t = None
+    for i in range(stride_count):
+        tseq = train_seq[i:]
+        vseq = valid_seq[i:]
+        _x, _y = dp.format(tseq, vocab_size, sequence_size)
+        if x is None:
+            x = _x
+            y = _y
+        else:
+            x = np.vstack((x, _x))
+            y = np.vstack((y, _y))
+
+        _x_t, _y_t = dp.format(vseq, vocab_size, sequence_size)
+        if x_t is None:
+            x_t = _x_t
+            y_t = _y_t
+        else:
+            x_t = np.vstack((x_t, _x_t))
+            y_t = np.vstack((y_t, _y_t))
 
     if kind == 0:
         print("Build OneHot Model")
@@ -47,7 +68,7 @@ def main(kind, epoch):
         model = AugmentedModel(vocab_size, sequence_size, tying=True, checkpoint_path=EVAL_ROOT)
     else:
         raise Exception("Model kind is not specified!")
-
+    
     model.compile()
     model.fit(x, y, x_t, y_t, epochs=epoch)
     model_pred = model.predict(test_seq)
@@ -94,7 +115,7 @@ def read_sentences():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test Experiment")
     parser.add_argument("--kind", type=int, default=0, help="model kind (0:lstm, 1:augmented, 2:tying)")
-    parser.add_argument("--epoch", default=20, help="train epochs")
+    parser.add_argument("--epoch", default=10, help="train epochs")
 
     args = parser.parse_args()
 
