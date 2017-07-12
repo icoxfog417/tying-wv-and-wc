@@ -18,7 +18,6 @@ def main(kind, epoch):
         os.mkdir(EVAL_ROOT)
     
     sequence_size = 20
-    stride_count = sequence_size
 
     #train_seq = sample_generator(vocab_size, 10000)
     #valid_seq = sample_generator(vocab_size, 2000)
@@ -38,7 +37,7 @@ def main(kind, epoch):
     y = None
     x_t = None
     y_t = None
-    for i in range(stride_count):
+    for i in range(sequence_size):
         tseq = train_seq[i:]
         vseq = valid_seq[i:]
         _x, _y = dp.format(tseq, vocab_size, sequence_size)

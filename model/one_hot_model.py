@@ -35,7 +35,7 @@ class OneHotModel():
         self.model = Sequential()
         self.model.add(self.embedding)
         self.model.add(layer1)
-        #self.model.add(layer2)
+        self.model.add(layer2)
         self.model.add(map_projection)
     
     def compile(self):
@@ -51,7 +51,7 @@ class OneHotModel():
         perplexity = K.exp(cross_entropy)
         return perplexity
 
-    def fit(self, x_train, y_train, x_test, y_test, batch_size=32, epochs=20):
+    def fit(self, x_train, y_train, x_test, y_test, batch_size=20, epochs=20):
         self.model.fit(
             x_train, y_train,
             validation_data=(x_test, y_test),

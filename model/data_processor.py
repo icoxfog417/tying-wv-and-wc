@@ -18,7 +18,7 @@ class DataProcessor():
         r_idx = r.to_indexed().make_vocab(vocab_size=vocab_size, force=force)
         return r_idx
     
-    def make_batch_iter(self, r_idx, kind="train", batch_size=20, sequence_size=35, stride=-1):
+    def make_batch_iter(self, r_idx, kind="train", batch_size=20, sequence_size=35):
         # count all tokens
         word_count = 0
         path = r_idx.train_file_path
@@ -33,29 +33,30 @@ class DataProcessor():
                 word_count += len(words)
         
         vocab_size = len(r_idx.vocab_data())
-        sequence_count = word_count // sequence_size
-        if stride <= 0:
-            steps_per_epoch = sequence_count // batch_size
-        else:
-            steps_per_epoch = ((word_count - sequence_size) / stride + 1) // batch_size
+        steps_per_epoch = 0
+        for i in range(sequence_size):
+            steps_per_epoch += (word_count - i - 1) // sequence_size
+        steps_per_epoch = steps_per_epoch // batch_size
 
         def generator():
             while True:
                 buffer = []
-                with open(path, encoding="utf-8") as f:
-                    for line in f:
-                        words = r_idx.str_to_ids(line.strip())
-                        buffer += words
-                        if len(buffer) > sequence_size * batch_size:
-                            cut_size = sequence_size * batch_size
-                            _seq = buffer[:cut_size + 1]  # +1 for next word
-                            words, nexts = self.format(_seq, vocab_size, sequence_size)
-                            if stride < 0:
+                for i in range(sequence_size):
+                    initial_slide = False
+                    with open(path, encoding="utf-8") as f:
+                        for line in f:
+                            words = r_idx.str_to_ids(line.strip())
+                            if not initial_slide:
+                                words = words[i:]
+                                initial_slide = True
+                            buffer += words
+                            if len(buffer) > sequence_size * batch_size:
+                                cut_size = sequence_size * batch_size
+                                _seq = buffer[:cut_size + 1]  # +1 for next word
+                                words, nexts = self.format(_seq, vocab_size, sequence_size)
                                 buffer = buffer[cut_size:]
-                            else:
-                                buffer = buffer[stride:]
 
-                            yield words, nexts
+                                yield words, nexts
 
         return steps_per_epoch, generator()
 
