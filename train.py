@@ -27,7 +27,7 @@ def train_baseline(network_size, dataset_kind, epochs=40):
     setting = ProposedSetting(network_size, dataset_kind)
     dataset = prepare_dataset(dataset_kind)
     vocab_size = len(dataset.vocab_data())
-    sequence_size = 35
+    sequence_size = 20
 
     dp = DataProcessor()
     train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size)
@@ -45,7 +45,7 @@ def train_augmented(network_size, dataset_kind, tying=False, epochs=40):
     setting = ProposedSetting(network_size, dataset_kind)
     dataset = prepare_dataset(dataset_kind)
     vocab_size = len(dataset.vocab_data())
-    sequence_size = 35
+    sequence_size = 20
 
     dp = DataProcessor()
     train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size)
