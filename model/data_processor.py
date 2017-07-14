@@ -18,7 +18,7 @@ class DataProcessor():
         r_idx = r.to_indexed().make_vocab(vocab_size=vocab_size, force=force)
         return r_idx
     
-    def make_batch_iter(self, r_idx, kind="train", batch_size=20, sequence_size=35):
+    def make_batch_iter(self, r_idx, kind="train", batch_size=20, sequence_size=35, stride=0):
         # count all tokens
         word_count = 0
         path = r_idx.train_file_path
@@ -34,14 +34,14 @@ class DataProcessor():
         
         vocab_size = len(r_idx.vocab_data())
         steps_per_epoch = 0
-        for i in range(sequence_size):
+        for i in range(stride + 1):
             steps_per_epoch += (word_count - i - 1) // sequence_size
         steps_per_epoch = steps_per_epoch // batch_size
 
         def generator():
             while True:
                 buffer = []
-                for i in range(sequence_size):
+                for i in range(stride + 1):
                     initial_slide = False
                     with open(path, encoding="utf-8") as f:
                         for line in f:

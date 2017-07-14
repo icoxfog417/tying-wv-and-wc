@@ -15,7 +15,7 @@ class AugmentedModel(OneHotModel):
         sequence_size,
         setting=None,
         checkpoint_path="",
-        temperature=10,
+        temperature=20,
         tying=False):
 
         super().__init__(vocab_size, sequence_size, setting, checkpoint_path)

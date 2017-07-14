@@ -22,7 +22,7 @@ def prepare_dataset(dataset_kind):
     return dataset
 
 
-def train_baseline(network_size, dataset_kind, epochs=40):
+def train_baseline(network_size, dataset_kind, epochs=40, stride=0):
     # prepare the data
     setting = ProposedSetting(network_size, dataset_kind)
     dataset = prepare_dataset(dataset_kind)
@@ -30,8 +30,8 @@ def train_baseline(network_size, dataset_kind, epochs=40):
     sequence_size = 20
 
     dp = DataProcessor()
-    train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size)
-    valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sequence_size=sequence_size)
+    train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size, stride=stride)
+    valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sequence_size=sequence_size, stride=stride)
 
     # make one hot model
     model = OneHotModel(vocab_size, sequence_size, setting, LOG_ROOT)
@@ -40,7 +40,7 @@ def train_baseline(network_size, dataset_kind, epochs=40):
     model.save(MODEL_ROOT)
 
 
-def train_augmented(network_size, dataset_kind, tying=False, epochs=40):
+def train_augmented(network_size, dataset_kind, tying=False, epochs=40, stride=0):
     # prepare the data
     setting = ProposedSetting(network_size, dataset_kind)
     dataset = prepare_dataset(dataset_kind)
@@ -48,8 +48,8 @@ def train_augmented(network_size, dataset_kind, tying=False, epochs=40):
     sequence_size = 20
 
     dp = DataProcessor()
-    train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size)
-    valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sequence_size=sequence_size)
+    train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size, stride=stride)
+    valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sequence_size=sequence_size, stride=stride)
 
     # make one hot model
     model = AugmentedModel(vocab_size, sequence_size, setting, tying=tying, checkpoint_path=LOG_ROOT)
@@ -67,6 +67,7 @@ if __name__ == "__main__":
     parser.add_argument("--nsize", default="small", help="network size (small, medium, large)")
     parser.add_argument("--dataset", default="ptb", help="dataset kind (ptb or wiki2)")
     parser.add_argument("--epochs", type=int, default=40, help="epoch to train")
+    parser.add_argument("--stride", type=int, default=0, help="stride of the sequence")
     args = parser.parse_args()
 
     n_size = args.nsize
@@ -77,6 +78,6 @@ if __name__ == "__main__":
 
     if args.aug or args.tying:
         print("Use Augmented Model (tying={})".format(args.tying))
-        train_augmented(n_size, dataset, args.tying, args.epochs)
+        train_augmented(n_size, dataset, args.tying, args.epochs, args.stride)
     else:
-        train_baseline(n_size, dataset, args.epochs)
+        train_baseline(n_size, dataset, args.epochs, args.stride)
