@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import tensorflow as tf
 from keras.models import Sequential
 from keras.layers import Embedding, Dense, TimeDistributed, LSTM, Activation, Dropout
 from keras import losses
@@ -30,13 +31,13 @@ class OneHotModel():
         self.embedding = Embedding(self.vocab_size, vector_length, input_length=sequence_size)
         layer1 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
         layer2 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
-        projection = Dense(self.vocab_size, activation="softmax")
-        map_projection = TimeDistributed(projection)
+        projection = TimeDistributed(Dense(self.vocab_size))
         self.model = Sequential()
         self.model.add(self.embedding)
         self.model.add(layer1)
         self.model.add(layer2)
-        self.model.add(map_projection)
+        self.model.add(projection)
+        self.model.add(Activation("softmax"))
     
     def compile(self):
         self.model.compile(
@@ -47,8 +48,8 @@ class OneHotModel():
     
     @classmethod
     def perplexity(cls, y_true, y_pred):
-        cross_entropy = K.mean(K.categorical_crossentropy(y_pred, y_true))
-        perplexity = K.pow(2.0, cross_entropy)
+        cross_entropy = K.mean(K.categorical_crossentropy(y_pred, y_true), axis=-1)
+        perplexity = K.exp(cross_entropy)
         return perplexity
 
     def fit(self, x_train, y_train, x_test, y_test, batch_size=20, epochs=20):
@@ -104,7 +105,10 @@ class OneHotModel():
     def predict(self, words):
         x = np.zeros((1, self.sequence_size))  # batch size 1 x sequence_size
         for i, w in enumerate(words):
-            x[0][i] = w
+            if i < self.sequence_size:
+                x[0][i] = w
+            else:
+                break
         pred = self.model.predict(x)[0]  # get first batch's prediction
         # pred.shape = sequence_size x vocab_size
         pred = pred[:len(words)]  # extract next words of given words
@@ -112,7 +116,7 @@ class OneHotModel():
         return pred_words
     
     def save(self, folder, suffix=""):
-        file_name = self.__class__.__name__.lower() + "" if not suffix else "_" + suffix + ".h5"
+        file_name = self.__class__.__name__.lower() + ("" if not suffix else "_" + suffix) + ".h5"
         path = os.path.join(folder, file_name)
         self.model.save_weights(path)
         return path

@@ -1,11 +1,11 @@
 import numpy as np
 from keras.models import Sequential
 from keras.layers import Embedding, Dense, TimeDistributed, LSTM, Activation, Dropout, Lambda
-from model.lang_model_sgd import LangModelSGD
-from model.one_hot_model import OneHotModel
 from keras import backend as K
 import tensorflow as tf
 from keras.losses import kullback_leibler_divergence
+from model.lang_model_sgd import LangModelSGD
+from model.one_hot_model import OneHotModel
 
 
 class AugmentedModel(OneHotModel):
@@ -15,7 +15,7 @@ class AugmentedModel(OneHotModel):
         sequence_size,
         setting=None,
         checkpoint_path="",
-        temperature=20,
+        temperature=10,
         tying=False):
 
         super().__init__(vocab_size, sequence_size, setting, checkpoint_path)
@@ -24,13 +24,14 @@ class AugmentedModel(OneHotModel):
         self.gamma = self.setting.gamma
 
         if tying:
-            self.model.pop()  # remove projection
-            #self.model.add(TimeDistributed(Dense(self.setting.vector_length)))
+            self.model.pop()  # remove activation
+            self.model.pop()  # remove projection (use self embedding)
             self.model.add(Lambda(lambda x: K.dot(x, K.transpose(self.embedding.embeddings))))
-            self.model.add(TimeDistributed(Activation("softmax")))
+            self.model.add(Activation("softmax"))
 
     def augmented_loss(self, y_true, y_pred):
-        loss = K.categorical_crossentropy(y_pred, y_true)
+        _y_pred = Activation("softmax")(y_pred)
+        loss = K.categorical_crossentropy(_y_pred, y_true)
 
         # y is (batch x seq x vocab)
         y_indexes = K.argmax(y_true, axis=2)  # turn one hot to index. (batch x seq)
@@ -46,11 +47,18 @@ class AugmentedModel(OneHotModel):
         y_t = tf.tensordot(y_vectors, K.transpose(self.embedding.embeddings), 1)
         y_t = K.reshape(y_t, (-1, self.sequence_size, self.vocab_size))  # explicitly set shape
         y_t = K.softmax(y_t / self.temperature)
-        aug_loss = kullback_leibler_divergence(y_t, y_pred)
+        _y_pred_t = Activation("softmax")(y_pred / self.temperature)
+        aug_loss = kullback_leibler_divergence(y_t, _y_pred_t)
         loss += (self.gamma * self.temperature) * aug_loss
         return loss
 
+    @classmethod
+    def perplexity(cls, y_true, y_pred):
+        _y_pred = Activation("softmax")(y_pred)
+        return super(AugmentedModel, cls).perplexity(y_true, _y_pred)
+
     def compile(self):
+        self.model.pop()  # remove activation (to calculate aug loss)
         self.model.compile(
             loss=self.augmented_loss,
             optimizer=LangModelSGD(self.setting),

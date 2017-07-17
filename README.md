@@ -41,22 +41,16 @@ To use the distribution type loss and input embedding and output projection equi
 
 ![result.PNG](./doc/result.PNG)
 
-* By the quick/small corpus experiment, I confirmed strong regularization effect by using proposed method.
-  * `augmentedmodel` and `augmentedmodel_tying` outperforms the baseline (`onehotmodel`)!
-* Temperature affects training speed (is this the trade-off of training and regularization?)
-* (I could not confirm the suppression of quantifier (like `a`, `the`)).
-* You can run this experiment by `python tests/evaluation.py`
-
-![result_ptb.PNG](./doc/result_ptb.PNG)
-
-* But when using Penn Treebank dataset, augmented & tying model needs much more time to exceed the baseline (LSTM).
-* I set `--skip 3` to reduce the dataset size. This may affect this result (augmented loss calculation takes cost because it requires multiplication with embedding matrix (large size matrix), so training speed is a little bit slow).
+* Run the 15 epoch on Penn Treebank dataset.
+  * `perplexity` score is large, I couldn't have confidence of its implementation. I'm waiting pull request!
+* `augmentedmodel` works better than the baseline(`onehotmodel`), and `augmentedmodel_tying` outperforms the baseline!
 * You can run this experiment by `python train.py`
 
-## Hypothesis
+## Additional validation
 
-* At the beginning of the training, embedding matrix to produce "teacher distribution" is not trained yet. So proposed method has a handicap in the first phase.
-* So to increase temperature (alpha) gradually will improve training speed.
-* To use the pre-trained word vector, fix the embedding matrix weight for some interval (fixed target technique at the reinforcement learning (please refer [*Deep Reinforcement Learning*](http://www.iclr.cc/lib/exe/fetch.php?media=iclr2015:silver-iclr2015.pdf))) will also improve the training.
+* At the beginning of the training, embedding matrix to produce "teacher distribution" is not trained yet. So proposed method has a little handicap at first.
+  * But the delay of training was not observed 
+* Increasing the temperature (alpha) gradually may improve training speed.
+* To use the pre-trained word vector, or fixing the embedding matrix weight for some interval (fixed target technique at the reinforcement learning (please refer [*Deep Reinforcement Learning*](http://www.iclr.cc/lib/exe/fetch.php?media=iclr2015:silver-iclr2015.pdf))) will also have effect to the training.
 
 **By the way,  [PyTorch example already use tying method](https://github.com/pytorch/examples/blob/1c6d9d276f3a0c484226996ab7f9df4f90ce52f4/word_language_model/model.py#L28)! Don't be afraid to use it!**

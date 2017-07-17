@@ -40,6 +40,6 @@ class ProposedSetting(Setting):
             self.dropout = 0.35 if dataset_kind == "ptb" else 0.6
         
         if dataset_kind == "ptb":
-            self.gamma = 0.65  # 0.5~0.8
+            self.gamma = 0.5  # 0.5~0.8
         elif kind == "wiki2":
-            self.gamma = 1.25  # 1.0~1.5
+            self.gamma = 1.0  # 1.0~1.5
