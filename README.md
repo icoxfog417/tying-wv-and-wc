@@ -42,7 +42,7 @@ To use the distribution type loss and input embedding and output projection equi
 ![result.PNG](./doc/result.PNG)
 
 * Run the 15 epoch on Penn Treebank dataset.
-  * `perplexity` score is large, I couldn't have confidence of its implementation. I'm waiting pull request!
+  * `perplexity` score is large, I couldn't have confidence of [its implementation](https://github.com/icoxfog417/tying-wv-and-wc/blob/master/model/one_hot_model.py#L50). I'm waiting pull request!
 * `augmentedmodel` works better than the baseline(`onehotmodel`), and `augmentedmodel_tying` outperforms the baseline!
 * You can run this experiment by `python train.py`
 
