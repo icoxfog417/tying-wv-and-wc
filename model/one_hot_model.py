@@ -5,7 +5,7 @@ from keras.models import Sequential
 from keras.layers import Embedding, Dense, TimeDistributed, LSTM, Activation, Dropout
 from keras import losses
 from keras import backend as K
-from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.callbacks import Callback, ModelCheckpoint, TensorBoard
 from model.lang_model_sgd import LangModelSGD
 from model.setting import Setting
 
@@ -13,14 +13,17 @@ from model.setting import Setting
 class OneHotModel():
     
     def __init__(self, 
-        vocab_size, 
+        vocab_size,
         sequence_size,
+        layer=2,
+        batch_size=32,
         setting=None,
         checkpoint_path="",
         tensor_board=True):
 
         self.vocab_size = vocab_size
         self.sequence_size = sequence_size
+        self.batch_size = batch_size
         self.setting = setting if setting else Setting()
         self.checkpoint_path = checkpoint_path
         self.tensor_board = tensor_board
@@ -28,16 +31,14 @@ class OneHotModel():
         dropout = self.setting.dropout
         vector_length = self.setting.vector_length
 
-        self.embedding = Embedding(self.vocab_size, vector_length, input_length=sequence_size)
-        layer1 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
-        layer2 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
-        projection = TimeDistributed(Dense(self.vocab_size))
         self.model = Sequential()
+        self.embedding = Embedding(self.vocab_size, vector_length, input_length=batch_size, batch_size=1)
         self.model.add(self.embedding)
-        self.model.add(layer1)
-        self.model.add(layer2)
-        self.model.add(projection)
-        self.model.add(Activation("softmax"))
+        for i in range(layer):
+            layer = LSTM(vector_length, stateful=True, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
+            self.model.add(layer)
+        self.model.add(TimeDistributed(Dense(self.vocab_size)))  # projection
+        self.model.add(Activation("softmax"))  # to proba
     
     def compile(self):
         self.model.compile(
@@ -48,18 +49,28 @@ class OneHotModel():
     
     @classmethod
     def perplexity(cls, y_true, y_pred):
-        cross_entropy = K.mean(K.categorical_crossentropy(y_pred, y_true), axis=-1)
+        cross_entropy = K.mean(K.categorical_crossentropy(y_pred, y_true), axis=1)
         perplexity = K.exp(cross_entropy)
         return perplexity
 
-    def fit(self, x_train, y_train, x_test, y_test, batch_size=20, epochs=20):
-        self.model.fit(
-            x_train, y_train,
-            validation_data=(x_test, y_test),
-            batch_size=batch_size,
-            epochs=epochs,
-            callbacks=self._get_callbacks()
-        )
+    def fit(self, x_train, y_train, x_test, y_test, epochs=20):
+
+        def train_iter():
+            while True:
+                for x_t, y_t in zip(x_train, y_train):
+                    yield x_t.reshape(1, -1), y_t.reshape(1, self.batch_size, self.vocab_size)
+
+        def test_iter():
+            i = 0
+            while True:
+                for x_t, y_t in zip(x_test, y_test):
+                    yield x_t.reshape(1, -1), y_t.reshape(1, self.batch_size, self.vocab_size)
+                    i += 1
+                    if i % self.sequence_size == 0:
+                        self.model.reset_states()
+                        i = 0
+
+        self.fit_generator(train_iter(), len(x_train), test_iter(), len(x_test), epochs)
 
     def fit_generator(self, generator, steps_per_epoch, test_generator, test_steps_per_epoch, epochs=20):
         self.model.fit_generator(
@@ -72,7 +83,7 @@ class OneHotModel():
         )
     
     def _get_callbacks(self):
-        callbacks = [self.model.optimizer.get_lr_scheduler()]
+        callbacks = [self.model.optimizer.get_lr_scheduler(), ResetStatesCallback(self.sequence_size)]
         folder_name = self.get_name()
         self_path = os.path.join(self.checkpoint_path, folder_name)
         if self.checkpoint_path:
@@ -102,19 +113,27 @@ class OneHotModel():
     def get_name(self):
         return self.__class__.__name__.lower()
 
-    def predict(self, words):
-        x = np.zeros((1, self.sequence_size))  # batch size 1 x sequence_size
+    def predict(self, words, use_proba=True):
+        preds = []
+        self.model.reset_states()
         for i, w in enumerate(words):
-            if i < self.sequence_size:
-                x[0][i] = w
+            x = np.zeros((1, self.batch_size))
+            x.fill(w)
+            pred = self.model.predict(x)[0]
+            preds.append(pred)
+
+        preds = np.sum(np.array(preds), axis=1)
+        pred_words = []
+        for p in preds:
+            if use_proba:
+                _p = p / np.sum(p)
+                w = np.random.choice(range(len(_p)), p=_p)
             else:
-                break
-        pred = self.model.predict(x)[0]  # get first batch's prediction
-        # pred.shape = sequence_size x vocab_size
-        pred = pred[:len(words)]  # extract next words of given words
-        pred_words = np.argmax(pred, axis=1)
+                w = np.argmax(p)
+            pred_words.append(w)
+
         return pred_words
-    
+
     def save(self, folder, suffix=""):
         file_name = self.__class__.__name__.lower() + ("" if not suffix else "_" + suffix) + ".h5"
         path = os.path.join(folder, file_name)
@@ -123,3 +142,13 @@ class OneHotModel():
 
     def load(self, path):
         self.model.load_weights(path)
+
+
+class ResetStatesCallback(Callback):
+
+    def __init__(self, sequence_size):
+        self.sequence_size = sequence_size
+
+    def on_batch_end(self, batch, logs={}):
+        if batch % self.sequence_size == 0:
+            self.model.reset_states()

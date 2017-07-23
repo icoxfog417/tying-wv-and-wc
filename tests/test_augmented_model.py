@@ -13,17 +13,18 @@ class TestAugmentedModel(unittest.TestCase):
     def test_augmented_loss(self):
         vocab_size = 5
         sequence_size = 20
+        batch_size = 12
 
-        model = AugmentedModel(vocab_size, sequence_size)
+        model = AugmentedModel(vocab_size, sequence_size, batch_size=batch_size)
         y_true = np.array([
-            [[1,0,0,0,0]] * sequence_size,
-            [[0,1,0,0,0]] * sequence_size, 
-            [[0,0,1,0,0]] * sequence_size
+            [[1,0,0,0,0]] * batch_size,
+            [[0,1,0,0,0]] * batch_size, 
+            [[0,0,1,0,0]] * batch_size
         ])
         y_pred = np.array([
-            [[0.8,0,0.1,0,0]] * sequence_size,
-            [[0,0.9,0,0.3,0]] * sequence_size, 
-            [[0,0,0.5,0.1,0]] * sequence_size
+            [[0.8,0,0.1,0,0]] * batch_size,
+            [[0,0.9,0,0.3,0]] * batch_size, 
+            [[0,0,0.5,0.1,0]] * batch_size
         ])
         y_true = K.variable(y_true)
         y_pred = K.variable(y_pred)
@@ -33,13 +34,15 @@ class TestAugmentedModel(unittest.TestCase):
     def test_model(self):
         vocab_size = 10
         sequence_size = 20
+        batch_size = 12
 
         dp = DataProcessor()
-        samples = np.tile(np.random.randint(vocab_size, size=sequence_size), 10)
+        test_seq = np.random.randint(vocab_size, size=batch_size + 1)
+        samples = np.tile(test_seq, sequence_size)
         x, y = dp.format(samples, vocab_size, sequence_size)
         x_t, y_t = dp.format(samples, vocab_size, sequence_size)
 
-        model = AugmentedModel(vocab_size, sequence_size)
+        model = AugmentedModel(vocab_size, sequence_size, layer=1, batch_size=batch_size, )
         model.compile()
         print("augmented model -----------")
         model.fit(x, y, x_t, y_t, epochs=20)
@@ -47,13 +50,15 @@ class TestAugmentedModel(unittest.TestCase):
     def test_model_tying(self):
         vocab_size = 10
         sequence_size = 20
+        batch_size = 12
 
         dp = DataProcessor()
-        samples = np.tile(np.array(np.random.randint(vocab_size, size=sequence_size)), 10)
+        test_seq = np.random.randint(vocab_size, size=batch_size + 1)
+        samples = np.tile(test_seq, sequence_size)
         x, y = dp.format(samples, vocab_size, sequence_size)
         x_t, y_t = dp.format(samples, vocab_size, sequence_size)
 
-        model = AugmentedModel(vocab_size, sequence_size, tying=True)
+        model = AugmentedModel(vocab_size, sequence_size, layer=1, batch_size=batch_size, tying=True)
         model.compile()
         print("tying model ---------------")
         model.fit(x, y, x_t, y_t, epochs=20)

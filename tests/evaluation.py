@@ -18,58 +18,33 @@ def main(kind, epoch):
         os.mkdir(EVAL_ROOT)
     
     sequence_size = 20
-
-    #train_seq = sample_generator(vocab_size, 10000)
-    #valid_seq = sample_generator(vocab_size, 2000)
-    #test_seq = sample_generator(vocab_size, 20)
-    #vocab_size = 100
-
+    batch_size = 32
     words, vocab = read_sentences()
     vocab_size = len(vocab)
-    valid_size = int(len(words) / 4)
+    valid_size = len(words) // 4
     train_seq = words[:-valid_size]
     valid_seq = words[-valid_size:-20]
     test_seq = words[-20:]
     print("{} train, {} valid ({} vocab)".format(len(train_seq), len(valid_seq), len(vocab)))
 
     dp = DataProcessor()
-    x = None
-    y = None
-    x_t = None
-    y_t = None
-    for i in range(sequence_size):
-        tseq = train_seq[i:]
-        vseq = valid_seq[i:]
-        _x, _y = dp.format(tseq, vocab_size, sequence_size)
-        if x is None:
-            x = _x
-            y = _y
-        else:
-            x = np.vstack((x, _x))
-            y = np.vstack((y, _y))
-
-        _x_t, _y_t = dp.format(vseq, vocab_size, sequence_size)
-        if x_t is None:
-            x_t = _x_t
-            y_t = _y_t
-        else:
-            x_t = np.vstack((x_t, _x_t))
-            y_t = np.vstack((y_t, _y_t))
+    X, y = dp.format(train_seq, vocab_size, batch_size)
+    X_t, y_t = dp.format(valid_seq, vocab_size, batch_size)
 
     if kind == 0:
         print("Build OneHot Model")
-        model = OneHotModel(vocab_size, sequence_size, checkpoint_path=EVAL_ROOT)
+        model = OneHotModel(vocab_size, sequence_size, layer=1, batch_size=batch_size, checkpoint_path=EVAL_ROOT)
     elif kind == 1:
         print("Build Augmented Model")
-        model = AugmentedModel(vocab_size, sequence_size, checkpoint_path=EVAL_ROOT)
+        model = AugmentedModel(vocab_size, sequence_size, layer=1, batch_size=batch_size, checkpoint_path=EVAL_ROOT)
     elif kind == 2:
         print("Build Augmented(Tying) Model")
-        model = AugmentedModel(vocab_size, sequence_size, tying=True, checkpoint_path=EVAL_ROOT)
+        model = AugmentedModel(vocab_size, sequence_size, layer=1, batch_size=batch_size, tying=True, checkpoint_path=EVAL_ROOT)
     else:
         raise Exception("Model kind is not specified!")
     
     model.compile()
-    model.fit(x, y, x_t, y_t, epochs=epoch)
+    model.fit(X, y, X_t, y_t, epochs=epoch)
     model_pred = model.predict(test_seq)
 
     rev_vocab =  {v:k for k, v in vocab.items()}
@@ -114,7 +89,7 @@ def read_sentences():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test Experiment")
     parser.add_argument("--kind", type=int, default=0, help="model kind (0:lstm, 1:augmented, 2:tying)")
-    parser.add_argument("--epoch", default=10, help="train epochs")
+    parser.add_argument("--epoch", default=15, help="train epochs")
 
     args = parser.parse_args()
 

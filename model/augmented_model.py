@@ -13,19 +13,23 @@ class AugmentedModel(OneHotModel):
     def __init__(self, 
         vocab_size, 
         sequence_size,
+        layer=2,
+        batch_size=32,
         setting=None,
+        temperature=20,
+        tying=False,
         checkpoint_path="",
-        temperature=10,
-        tying=False):
+        tensor_board=True
+        ):
 
-        super().__init__(vocab_size, sequence_size, setting, checkpoint_path)
+        super().__init__(vocab_size, sequence_size, layer, batch_size, setting, checkpoint_path, tensor_board)
         self.temperature = temperature
         self.tying = tying
         self.gamma = self.setting.gamma
 
         if tying:
-            self.model.pop()  # remove activation
             self.model.pop()  # remove projection (use self embedding)
+            self.model.pop()  # remove activation
             self.model.add(Lambda(lambda x: K.dot(x, K.transpose(self.embedding.embeddings))))
             self.model.add(Activation("softmax"))
 
@@ -33,19 +37,13 @@ class AugmentedModel(OneHotModel):
         _y_pred = Activation("softmax")(y_pred)
         loss = K.categorical_crossentropy(_y_pred, y_true)
 
-        # y is (batch x seq x vocab)
-        y_indexes = K.argmax(y_true, axis=2)  # turn one hot to index. (batch x seq)
-        y_vectors = self.embedding(y_indexes)  # lookup the vector (batch x seq x vector_length)
+        # y is (seq x batch x vocab)
+        y_indexes = K.argmax(y_true, axis=2)  # turn one hot to index. (seq x batch)
+        y_vectors = self.embedding(y_indexes)  # lookup the vector (seq x batch x vector_length)
 
-        #v_length = self.setting.vector_length
-        #y_vectors = K.reshape(y_vectors, (-1, v_length))
-        #y_t = K.map_fn(lambda v: K.dot(self.embedding.embeddings, K.reshape(v, (-1, 1))), y_vectors)
-        #y_t = K.squeeze(y_t, axis=2)  # unknown but necessary operation
-        #y_t = K.reshape(y_t, (-1, self.sequence_size, self.vocab_size))
-
-        # vector x embedding dot products (batch x seq x vocab)
+        # vector x embedding dot products (seq x batch x vocab)
         y_t = tf.tensordot(y_vectors, K.transpose(self.embedding.embeddings), 1)
-        y_t = K.reshape(y_t, (-1, self.sequence_size, self.vocab_size))  # explicitly set shape
+        y_t = K.reshape(y_t, (-1, self.batch_size, self.vocab_size))  # explicitly set shape
         y_t = K.softmax(y_t / self.temperature)
         _y_pred_t = Activation("softmax")(y_pred / self.temperature)
         aug_loss = kullback_leibler_divergence(y_t, _y_pred_t)
@@ -64,6 +62,27 @@ class AugmentedModel(OneHotModel):
             optimizer=LangModelSGD(self.setting),
             metrics=["accuracy", self.perplexity]
             )
+
+    def predict(self, words, use_proba=True):
+        preds = []
+        for i, w in enumerate(words):
+            x = np.zeros((1, self.batch_size))
+            x.fill(w)
+            pred = self.model.predict(x)[0]
+            pred = np.exp(pred) / np.sum(np.exp(pred))
+            preds.append(pred)
+
+        preds = np.sum(np.array(preds), axis=1)
+        pred_words = []
+        for p in preds:
+            if use_proba:
+                _p = p / np.sum(p)
+                w = np.random.choice(range(len(_p)), p=_p)
+            else:
+                w = np.argmax(p)
+            pred_words.append(w)
+
+        return pred_words
 
     def get_name(self):
         return self.__class__.__name__.lower() + ("_tying" if self.tying else "")

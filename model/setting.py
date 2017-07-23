@@ -25,7 +25,7 @@ class ProposedSetting(Setting):
             self.epoch_interval = 5
             self.decay = 0.9
             self.norm_clipping = 5
-            self.dropout = 0.7 if dataset_kind == "ptb" else 0.8
+            self.dropout = 0.5 if dataset_kind == "ptb" else 0.8
         elif network_size == "medium":
             self.vector_length = 650
             self.epoch_interval = 10

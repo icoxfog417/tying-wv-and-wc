@@ -13,15 +13,16 @@ class TestOneHotModel(unittest.TestCase):
     def test_one_hot_forward(self):
         vocab_size = 10
         sequence_size = 20
+        batch_size = 12
         checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints")
 
         dp = DataProcessor()
-        test_seq = np.random.randint(vocab_size, size=sequence_size)
-        samples = np.tile(test_seq, 10)
+        test_seq = np.random.randint(vocab_size, size=batch_size + 1)
+        samples = np.tile(test_seq, sequence_size)
         x, y = dp.format(samples, vocab_size, sequence_size)
         x_t, y_t = dp.format(samples, vocab_size, sequence_size)
 
-        model = OneHotModel(vocab_size, sequence_size, checkpoint_path=checkpoint_path)
+        model = OneHotModel(vocab_size, sequence_size, layer=1, batch_size=batch_size, checkpoint_path=checkpoint_path)
         model.compile()
 
         model.fit(x, y, x_t, y_t, epochs=20)
