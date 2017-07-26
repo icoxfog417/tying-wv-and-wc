@@ -3,8 +3,10 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 import shutil
 import argparse
+import random
 from collections import Counter
 import numpy as np
+from keras import optimizers
 from model.data_processor import DataProcessor
 from model.one_hot_model import OneHotModel
 from model.augmented_model import AugmentedModel
@@ -43,7 +45,7 @@ def main(kind, epoch):
     else:
         raise Exception("Model kind is not specified!")
     
-    model.compile()
+    model.compile(optimizers.Adam())
     model.fit(X, y, X_t, y_t, epochs=epoch)
     model_pred = model.predict(test_seq)
 
@@ -75,12 +77,16 @@ def read_sentences():
             s = line.strip().replace(".", "").replace(",", "").replace("`", "").replace(";", "").replace("-", "").strip().lower()
             ws = s.split()
             ws = [w.strip() for w in ws if w.strip()]
+            ids = []
             for w in ws:
                 if w not in vocab:
                     vocab[w] = len(vocab)
                 idx = vocab[w]
-                words.append(idx)
-    
+                ids.append(idx)
+            words.append(ids)
+
+    random.shuffle(words)
+    words = sum(words, [])
     print("{} words, {} vocabs.".format(len(words), len(vocab)))
 
     return words, vocab

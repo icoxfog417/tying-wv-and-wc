@@ -16,13 +16,16 @@ class TestDataProcessor(unittest.TestCase):
         batch_size = 7
         dp = DataProcessor()
         samples = np.array(list(range(sequence_size + 1)) * batch_size)
-        x, y = dp.format(samples, vocab_size, sequence_size)
+        x, y = dp.format(samples, vocab_size, batch_size)
 
-        self.assertEqual(x.shape, (sequence_size, batch_size))
-        self.assertEqual(y.shape, (sequence_size, batch_size, vocab_size))
+        self.assertTrue(len(x) == len(y) == sequence_size)
+        self.assertEqual(x[0].shape, (batch_size, 1))
+        self.assertEqual(y[0].shape, (batch_size, 1, vocab_size))
+
         for i in range(sequence_size):
-            self.assertEqual(np.sum(x[i]) / batch_size, i)
-            self.assertEqual(np.sum(np.argmax(y[i], axis=-1)) / batch_size, i + 1)
+            self.assertEqual(x[i].flatten().tolist(), [i] * batch_size)
+            n = np.argmax(np.squeeze(y[i], axis=1), axis=1)
+            self.assertEqual([i + 1] * batch_size, n.tolist())
 
     def test_generator(self):
         data_root = os.path.join(os.path.dirname(__file__), "data")
@@ -40,27 +43,36 @@ class TestDataProcessor(unittest.TestCase):
 
         words_in_batch = sequence_size * batch_size
         check_count = 5
-        max_count = (words_in_batch + sequence_size) * check_count
+        max_count = (words_in_batch + batch_size) * check_count
         words = []
         with open(r_idx.valid_file_path, encoding="utf-8") as f:
             for line in f:
                 words += r_idx.str_to_ids(line.strip())
                 if len(words) > max_count:
+                    words = words[:max_count]
+
+        words = np.array(words)
+        subseq = None
+        for i in range(len(words) // batch_size - 1):
+            if subseq is None or i % sequence_size == 0:
+                index = i // sequence_size
+                subseq = words[index * words_in_batch:][:words_in_batch + batch_size]
+                subseq = subseq.reshape(batch_size, -1)
+                if index >= check_count:
                     break
 
-        for i in range(check_count):
-            X, y = next(generator)
-            self.assertEqual(X.shape, (sequence_size, batch_size))
-            self.assertEqual(y.shape, (sequence_size, batch_size, vocab_size))
-            index = i * words_in_batch
-            seq = words[index:][:(words_in_batch + batch_size)]
-            seq = np.array(seq).reshape((-1, sequence_size + 1))
-            seq = np.transpose(seq)
+            subseq_index = i % sequence_size
+            X, y = next(generator)                
 
-            for r in range(X.shape[0]):
-                self.assertEqual(X[r].tolist(), seq[r].tolist())
-                self.assertEqual(np.argmax(y[r], axis=-1).tolist(), seq[r + 1].tolist())
-        
+            self.assertEqual(X.shape, (batch_size, 1))
+            self.assertEqual(y.shape, (batch_size, 1, vocab_size))
+
+            X_ans = subseq[:, subseq_index]
+            y_ans = subseq[:, subseq_index + 1]
+
+            self.assertEqual(X.flatten().tolist(), X_ans.tolist())
+            self.assertEqual(np.argmax(np.squeeze(y, axis=1), axis=1).tolist(), y_ans.tolist())
+
         generator = None
         shutil.rmtree(data_root)
 

@@ -32,25 +32,26 @@ class OneHotModel():
         vector_length = self.setting.vector_length
 
         self.model = Sequential()
-        self.embedding = Embedding(self.vocab_size, vector_length, input_length=batch_size, batch_size=1)
+        self.embedding = Embedding(self.vocab_size, vector_length, input_length=1, batch_size=batch_size)
         self.model.add(self.embedding)
         for i in range(layer):
             layer = LSTM(vector_length, stateful=True, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
             self.model.add(layer)
-        self.model.add(TimeDistributed(Dense(self.vocab_size)))  # projection
+        self.model.add(Dense(self.vocab_size)) # projection
         self.model.add(Activation("softmax"))  # to proba
     
-    def compile(self):
+    def compile(self, optimizer=None):
+        _optimizer = optimizer if optimizer else LangModelSGD(self.setting)
         self.model.compile(
             loss=losses.categorical_crossentropy,
-            optimizer=LangModelSGD(self.setting),
+            optimizer=_optimizer,
             metrics=["accuracy", self.perplexity]
             )
     
     @classmethod
     def perplexity(cls, y_true, y_pred):
-        cross_entropy = K.mean(K.categorical_crossentropy(y_pred, y_true), axis=1)
-        perplexity = K.exp(cross_entropy)
+        cross_entropy = K.categorical_crossentropy(y_pred, y_true)
+        perplexity = K.exp(K.mean(cross_entropy))
         return perplexity
 
     def fit(self, x_train, y_train, x_test, y_test, epochs=20):
@@ -58,13 +59,13 @@ class OneHotModel():
         def train_iter():
             while True:
                 for x_t, y_t in zip(x_train, y_train):
-                    yield x_t.reshape(1, -1), y_t.reshape(1, self.batch_size, self.vocab_size)
+                    yield x_t, y_t
 
         def test_iter():
             i = 0
             while True:
                 for x_t, y_t in zip(x_test, y_test):
-                    yield x_t.reshape(1, -1), y_t.reshape(1, self.batch_size, self.vocab_size)
+                    yield x_t, y_t
                     i += 1
                     if i % self.sequence_size == 0:
                         self.model.reset_states()
@@ -83,7 +84,9 @@ class OneHotModel():
         )
     
     def _get_callbacks(self):
-        callbacks = [self.model.optimizer.get_lr_scheduler(), ResetStatesCallback(self.sequence_size)]
+        callbacks = [ResetStatesCallback(self.sequence_size)]
+        if self.model.optimizer is LangModelSGD:
+            callbacks.append(self.model.optimizer.get_lr_scheduler())
         folder_name = self.get_name()
         self_path = os.path.join(self.checkpoint_path, folder_name)
         if self.checkpoint_path:
@@ -117,7 +120,7 @@ class OneHotModel():
         preds = []
         self.model.reset_states()
         for i, w in enumerate(words):
-            x = np.zeros((1, self.batch_size))
+            x = np.zeros((self.batch_size, 1))
             x.fill(w)
             pred = self.model.predict(x)[0]
             preds.append(pred)

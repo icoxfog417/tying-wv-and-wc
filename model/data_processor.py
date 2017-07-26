@@ -47,31 +47,25 @@ class DataProcessor():
                             _seq = buffer[:words_in_batch + batch_size]  # + for next words
                             words, nexts = self.format(_seq, vocab_size, batch_size)
                             for i in range(len(words)):
-                                yield words[i].reshape(1, batch_size), nexts[i].reshape(1, batch_size, vocab_size)
+                                yield words[i], nexts[i]
                             if sequence_end_callback is not None:
                                 sequence_end_callback()
-                            buffer = buffer[-batch_size:]
+                            buffer = buffer[words_in_batch:]
 
         return steps_per_epoch, generator()
 
     def format(self, word_seq, vocab_size, batch_size):
         _word_seq = word_seq[:(batch_size * (len(word_seq) // batch_size))]
         _word_seq = np.array(_word_seq).reshape(batch_size, -1)
-        _word_seq = np.transpose(_word_seq)
-        words = None
-        nexts = None
+        words = []
+        nexts = []
         # iterate over batch size
-        for i in range(len(_word_seq) - 1):
-            _word = _word_seq[i, :]
-            _next = _word_seq[i + 1, :]
+        for i in range(_word_seq.shape[1] - 1):
+            _word = _word_seq[:, i].reshape(-1, 1)
+            _next = _word_seq[:, i + 1].reshape(-1, 1)
             _next = to_categorical(_next, vocab_size)
-            if words is None:
-                words = _word
-                nexts = [_next]
-            else:
-                words = np.vstack((words, _word))
-                nexts.append(_next)
-
-        nexts = np.array(nexts)
+            _next = np.expand_dims(_next, axis=1)
+            words.append(_word)
+            nexts.append(_next)
 
         return words, nexts

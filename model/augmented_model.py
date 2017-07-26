@@ -37,13 +37,13 @@ class AugmentedModel(OneHotModel):
         _y_pred = Activation("softmax")(y_pred)
         loss = K.categorical_crossentropy(_y_pred, y_true)
 
-        # y is (seq x batch x vocab)
-        y_indexes = K.argmax(y_true, axis=2)  # turn one hot to index. (seq x batch)
-        y_vectors = self.embedding(y_indexes)  # lookup the vector (seq x batch x vector_length)
+        # y is (batch x 1 x vocab)
+        y_indexes = K.argmax(y_true, axis=2)  # turn one hot to index. (to batch x 1)
+        y_vectors = self.embedding(y_indexes)  # lookup the vector (to batch x 1 x vector_length)
 
-        # vector x embedding dot products (seq x batch x vocab)
+        # vector x embedding dot products (to batch x 1 x vocab)
         y_t = tf.tensordot(y_vectors, K.transpose(self.embedding.embeddings), 1)
-        y_t = K.reshape(y_t, (-1, self.batch_size, self.vocab_size))  # explicitly set shape
+        y_t = K.reshape(y_t, (self.batch_size, 1, self.vocab_size))  # explicitly set shape
         y_t = K.softmax(y_t / self.temperature)
         _y_pred_t = Activation("softmax")(y_pred / self.temperature)
         aug_loss = kullback_leibler_divergence(y_t, _y_pred_t)
@@ -55,18 +55,20 @@ class AugmentedModel(OneHotModel):
         _y_pred = Activation("softmax")(y_pred)
         return super(AugmentedModel, cls).perplexity(y_true, _y_pred)
 
-    def compile(self):
+    def compile(self, optimizer=None):
         self.model.pop()  # remove activation (to calculate aug loss)
+        _optimizer = optimizer if optimizer else LangModelSGD(self.setting)
+
         self.model.compile(
             loss=self.augmented_loss,
-            optimizer=LangModelSGD(self.setting),
+            optimizer=_optimizer,
             metrics=["accuracy", self.perplexity]
             )
 
     def predict(self, words, use_proba=True):
         preds = []
         for i, w in enumerate(words):
-            x = np.zeros((1, self.batch_size))
+            x = np.zeros((self.batch_size, 1))
             x.fill(w)
             pred = self.model.predict(x)[0]
             pred = np.exp(pred) / np.sum(np.exp(pred))

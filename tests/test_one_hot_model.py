@@ -17,10 +17,10 @@ class TestOneHotModel(unittest.TestCase):
         checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints")
 
         dp = DataProcessor()
-        test_seq = np.random.randint(vocab_size, size=batch_size + 1)
-        samples = np.tile(test_seq, sequence_size)
-        x, y = dp.format(samples, vocab_size, sequence_size)
-        x_t, y_t = dp.format(samples, vocab_size, sequence_size)
+        test_seq = np.random.randint(vocab_size, size=sequence_size + 1)
+        samples = np.tile(test_seq, batch_size)
+        x, y = dp.format(samples, vocab_size, batch_size)
+        x_t, y_t = dp.format(samples, vocab_size, batch_size)
 
         model = OneHotModel(vocab_size, sequence_size, layer=1, batch_size=batch_size, checkpoint_path=checkpoint_path)
         model.compile()
