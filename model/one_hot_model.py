@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from keras.models import Sequential
-from keras.layers import Embedding, Dense, TimeDistributed, LSTM, Activation, Dropout
+from keras.layers import Embedding, Dense, TimeDistributed, LSTM, Activation, SpatialDropout1D
 from keras import losses
 from keras import backend as K
 from keras.callbacks import ModelCheckpoint, TensorBoard
@@ -31,13 +31,15 @@ class OneHotModel():
         vector_length = self.setting.vector_length
 
         self.embedding = Embedding(self.vocab_size, vector_length, input_length=sequence_size)
-        layer1 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
-        layer2 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
+        layer1 = LSTM(vector_length, return_sequences=True, dropout=dropout)
+        layer2 = LSTM(vector_length, return_sequences=True, dropout=dropout)
+        softmax_dropout = SpatialDropout1D(dropout)
         projection = Dense(self.vocab_size)
         self.model = Sequential()
         self.model.add(self.embedding)
         self.model.add(layer1)
         self.model.add(layer2)
+        self.model.add(softmax_dropout)
         self.model.add(projection)
         self.model.add(Activation("softmax"))
     
