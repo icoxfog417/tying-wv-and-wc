@@ -51,7 +51,7 @@ def train_augmented(network_size, dataset_kind, tying=False, epochs=40, stride=0
     train_steps, train_generator = dp.make_batch_iter(dataset, sequence_size=sequence_size, stride=stride)
     valid_steps, valid_generator = dp.make_batch_iter(dataset, kind="valid", sequence_size=sequence_size, stride=stride)
 
-    # make one hot model
+    # make augmented model
     model = AugmentedModel(vocab_size, sequence_size, setting, tying=tying, checkpoint_path=LOG_ROOT)
     model.compile()
     model.fit_generator(train_generator, train_steps, valid_generator, valid_steps, epochs=epochs)

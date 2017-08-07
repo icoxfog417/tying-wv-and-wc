@@ -1,6 +1,3 @@
-import copy
-import numpy as np
-import tensorflow as tf
 from keras import backend as K
 from keras.optimizers import Optimizer
 from keras.callbacks import LearningRateScheduler
