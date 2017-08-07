@@ -23,21 +23,21 @@ class ProposedSetting(Setting):
         if network_size == "small":
             self.vector_length = 200
             self.epoch_interval = 5
-            self.decay = 0.9
+            self.decay = 0.5
             self.norm_clipping = 5
-            self.dropout = 0.7 if dataset_kind == "ptb" else 0.8
+            self.dropout = 0.0 if dataset_kind == "ptb" else 0.0
         elif network_size == "medium":
             self.vector_length = 650
-            self.epoch_interval = 10
-            self.decay = 0.9
+            self.epoch_interval = 6
+            self.decay = 0.8
             self.norm_clipping = 5
-            self.dropout = 0.5 if dataset_kind == "ptb" else 0.6
+            self.dropout = 0.5 if dataset_kind == "ptb" else 0.5
         elif network_size == "large":
             self.vector_length = 1500
-            self.epoch_interval = 1
-            self.decay = 0.97
-            self.norm_clipping = 6
-            self.dropout = 0.35 if dataset_kind == "ptb" else 0.6
+            self.epoch_interval = 14
+            self.decay = 1 / 1.15
+            self.norm_clipping = 10
+            self.dropout = 0.65 if dataset_kind == "ptb" else 0.65
         
         if dataset_kind == "ptb":
             self.gamma = 0.5  # 0.5~0.8
