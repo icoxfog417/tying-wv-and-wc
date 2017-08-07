@@ -84,7 +84,7 @@ class OneHotModel():
             save_callback = ModelCheckpoint(os.path.join(self_path, file_name), save_weights_only=True)
             callbacks += [save_callback]
 
-            if self.tensor_board:
+            if self.tensor_board and K.backend()=='tensorflow':
                 board_path = os.path.join(self.checkpoint_path, "tensor_board")
                 self_board_path = os.path.join(board_path, folder_name)
                 if not os.path.exists(board_path):

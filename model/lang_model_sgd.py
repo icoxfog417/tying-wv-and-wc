@@ -11,8 +11,8 @@ class LangModelSGD(Optimizer):
         
         self.iterations = K.variable(0., name="iterations")
         self.lr = K.variable(1.0, name="lr")
-        self.epoch_interval = K.variable(setting.epoch_interval)
-        self.decay = K.variable(setting.decay)
+        self.epoch_interval = setting.epoch_interval
+        self.decay = setting.decay
         self.verbose = verbose
 
     def get_updates(self, params, constraints, loss):
@@ -25,20 +25,14 @@ class LangModelSGD(Optimizer):
 
     def get_config(self):
         config = {"iterations": float(K.get_value(self.iterations)),
-                  "lr": float(K.get_value(self.lr))
-                  }
+                  "lr": float(K.get_value(self.lr)),
+                  "epoch_interval": int(self.epoch_interval),
+                  "decay": float(self.decay)}
         base_config = super(LangModelSGD, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
     def get_lr_scheduler(self):
         def scheduler(epoch):
-            epoch_interval = K.get_value(self.epoch_interval)
-            if epoch != 0 and (epoch + 1) % epoch_interval == 0:
-                lr = K.get_value(self.lr)
-                decay = K.get_value(self.decay)
-                K.set_value(self.lr, lr * decay)
-                if self.verbose:
-                    print(self.get_config())
-            return K.get_value(self.lr)
-    
+            return 1.0 * self.decay ** (epoch // self.epoch_interval)
+
         return LearningRateScheduler(scheduler)
