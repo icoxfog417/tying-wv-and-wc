@@ -27,13 +27,13 @@ class OneHotModel():
         self.checkpoint_path = checkpoint_path
         self.tensor_board = tensor_board
 
-        dropout = self.setting.dropout
-        vector_length = self.setting.vector_length
+        self.dropout = self.setting.dropout
+        self.vector_length = self.setting.vector_length
 
-        self.embedding = Embedding(self.vocab_size, vector_length, input_length=sequence_size)
-        layer1 = LSTM(vector_length, return_sequences=True, dropout=dropout)
-        layer2 = LSTM(vector_length, return_sequences=True, dropout=dropout)
-        softmax_dropout = SpatialDropout1D(dropout)
+        self.embedding = Embedding(self.vocab_size, self.vector_length, input_length=self.sequence_size)
+        layer1 = LSTM(self.vector_length, return_sequences=True, dropout=self.dropout)
+        layer2 = LSTM(self.vector_length, return_sequences=True, dropout=self.dropout)
+        softmax_dropout = SpatialDropout1D(self.dropout)
         projection = Dense(self.vocab_size)
         self.model = Sequential()
         self.model.add(self.embedding)

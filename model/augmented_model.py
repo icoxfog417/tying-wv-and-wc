@@ -2,6 +2,7 @@ from keras.models import Sequential
 from keras.layers import Embedding, Dense, TimeDistributed, LSTM, Activation, Dropout, Lambda
 from keras import backend as K
 from keras.losses import kullback_leibler_divergence
+from keras.activations import softmax
 from model.lang_model_sgd import LangModelSGD
 from model.one_hot_model import OneHotModel
 from model.utils import Bias
@@ -27,7 +28,8 @@ class AugmentedModel(OneHotModel):
         if tying:
             self.model.pop()  # remove activation
             self.model.pop()  # remove projection (use self embedding)
-            self.model.add(Lambda(lambda x: K.dot(x, K.transpose(self.embedding.embeddings))))
+            self.model.add(Lambda(lambda x: K.dot(x, K.transpose(self.embedding.embeddings)),
+                           output_shape=(self.sequence_size, self.vocab_size))) # needed for theano backend
             self.model.add(Bias())
             self.model.add(Activation("softmax"))
 
@@ -37,11 +39,12 @@ class AugmentedModel(OneHotModel):
         # y is (batch x seq x vocab)
         y_indexes = K.argmax(y_true, axis=2)  # turn one hot to index. (batch x seq)
         y_vectors = self.embedding(y_indexes)  # lookup the vector (batch x seq x vector_length)
+        y_vectors = K.reshape(y_vectors, (-1, self.sequence_size, self.vector_length))
 
         # vector x embedding dot products (batch x seq x vocab)
         y_t = K.dot(y_vectors, K.transpose(self.embedding.embeddings))
-        y_t = K.softmax(y_t / self.temperature)
-        y_pred_t = K.softmax((K.log(y_pred) - self.model.layers[-2].bias) / self.temperature)
+        y_t = softmax(y_t / self.temperature)
+        y_pred_t = softmax((K.log(y_pred) - self.model.layers[-2].bias) / self.temperature)
         aug_loss = kullback_leibler_divergence(y_t, y_pred_t)
         loss += (self.gamma * self.temperature) * aug_loss
         return loss
