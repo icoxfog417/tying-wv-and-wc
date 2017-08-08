@@ -46,6 +46,14 @@ To use the distribution type loss and input embedding and output projection equi
 * `augmentedmodel` works better than the baseline(`onehotmodel`), and `augmentedmodel_tying` outperforms the baseline!
 * You can run this experiment by `python train.py`
 
+I implemented [stateful LSTM version](https://github.com/icoxfog417/tying-wv-and-wc/tree/stateful). Its result as following.
+
+![stateful_result.PNG](./doc/stateful_result.PNG)
+
+The perplexity is improved (but zaggy), and tying method loses its effect a little.  
+To use stateful LSTM in Keras is too hard ([especially `reset_states` in the validation set](https://github.com/fchollet/keras/issues/4185)), so there may be some limit included.
+
+
 ## Additional validation
 
 * At the beginning of the training, embedding matrix to produce "teacher distribution" is not trained yet. So proposed method has a little handicap at first.
