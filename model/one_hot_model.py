@@ -1,13 +1,15 @@
 import os
 import numpy as np
-import tensorflow as tf
 from keras.models import Sequential
-from keras.layers import Embedding, Dense, TimeDistributed, LSTM, Activation, Dropout
+from keras.layers import Embedding, Dense, TimeDistributed, LSTM, Activation, SpatialDropout1D
 from keras import losses
 from keras import backend as K
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from model.lang_model_sgd import LangModelSGD
 from model.setting import Setting
+from model.utils import PerplexityLogger
+from model.utils import perplexity
+from model.utils import log_perplexity
 
 
 class OneHotModel():
@@ -25,17 +27,19 @@ class OneHotModel():
         self.checkpoint_path = checkpoint_path
         self.tensor_board = tensor_board
 
-        dropout = self.setting.dropout
-        vector_length = self.setting.vector_length
+        self.dropout = self.setting.dropout
+        self.vector_length = self.setting.vector_length
 
-        self.embedding = Embedding(self.vocab_size, vector_length, input_length=sequence_size)
-        layer1 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
-        layer2 = LSTM(vector_length, return_sequences=True, dropout=dropout, recurrent_dropout=dropout)
-        projection = TimeDistributed(Dense(self.vocab_size))
+        self.embedding = Embedding(self.vocab_size, self.vector_length, input_length=self.sequence_size)
+        layer1 = LSTM(self.vector_length, return_sequences=True, dropout=self.dropout)
+        layer2 = LSTM(self.vector_length, return_sequences=True, dropout=self.dropout)
+        softmax_dropout = SpatialDropout1D(self.dropout)
+        projection = Dense(self.vocab_size)
         self.model = Sequential()
         self.model.add(self.embedding)
         self.model.add(layer1)
         self.model.add(layer2)
+        self.model.add(softmax_dropout)
         self.model.add(projection)
         self.model.add(Activation("softmax"))
     
@@ -43,14 +47,8 @@ class OneHotModel():
         self.model.compile(
             loss=losses.categorical_crossentropy,
             optimizer=LangModelSGD(self.setting),
-            metrics=["accuracy", self.perplexity]
+            metrics=["accuracy", log_perplexity, perplexity]
             )
-    
-    @classmethod
-    def perplexity(cls, y_true, y_pred):
-        cross_entropy = K.mean(K.categorical_crossentropy(y_pred, y_true), axis=-1)
-        perplexity = K.exp(cross_entropy)
-        return perplexity
 
     def fit(self, x_train, y_train, x_test, y_test, batch_size=20, epochs=20):
         self.model.fit(
@@ -72,7 +70,7 @@ class OneHotModel():
         )
     
     def _get_callbacks(self):
-        callbacks = [self.model.optimizer.get_lr_scheduler()]
+        callbacks = [PerplexityLogger(), self.model.optimizer.get_lr_scheduler()]
         folder_name = self.get_name()
         self_path = os.path.join(self.checkpoint_path, folder_name)
         if self.checkpoint_path:
@@ -86,7 +84,7 @@ class OneHotModel():
             save_callback = ModelCheckpoint(os.path.join(self_path, file_name), save_weights_only=True)
             callbacks += [save_callback]
 
-            if self.tensor_board:
+            if self.tensor_board and K.backend()=='tensorflow':
                 board_path = os.path.join(self.checkpoint_path, "tensor_board")
                 self_board_path = os.path.join(board_path, folder_name)
                 if not os.path.exists(board_path):

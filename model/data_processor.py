@@ -68,7 +68,7 @@ class DataProcessor():
             start = i * sequence_size
             words.append(word_seq[start:start + sequence_size])
             next_seq = word_seq[(start + 1):(start + 1 + sequence_size)]
-            next_seq_as_one_hot = to_categorical(next_seq, vocab_size)  # to one hot vector
+            next_seq_as_one_hot = to_categorical(next_seq, vocab_size).astype('float32')  # to one hot vector
             nexts.append(next_seq_as_one_hot)
         
         words = np.array(words)
